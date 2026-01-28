@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+{% load index %}
+
+<div style="margin-bottom:20px;">
+  <a href="{% url 'instructor_timetable' %}" class="btn">Instructor View</a>
+</div>
+
+<div>
+  {% for instructor in instructors %}
+  <h2 class="secHead">{{ instructor.name }} ({{ instructor.uid }})</h2>
+
+  <table class="timetable">
+    <thead>
+      <tr>
+        <th>Day</th>
+        {% for time in timeSlots %}
+        <th>{{ time.0 }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for week in weekDays %}
+      <tr>
+        <th>{{ week.0 }}</th>
+        {% for time in timeSlots %}
+        <td>
+          {% sub_instructor schedule instructor week.0 time.0 %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% endfor %}
+</div>
+
+{% endblock %}
