@@ -64,3 +64,118 @@ Generation 30 | Fitness 0.5000 | Conflicts 1
 Generation 31 | Fitness 0.5000 | Conflicts 1
 Generation 32 | Fitness 0.5000 | Conflicts 1
 Generation 33 | Fitness 1.0000 | Conflicts 0
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Not Found: /favicon.ico
+C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\models.py changed, reloading.
+Watching for file changes with StatReloader
+C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\models.py changed, reloading.
+Watching for file changes with StatReloader
+C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\models.py changed, reloading.
+Watching for file changes with StatReloader
+C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\models.py changed, reloading.
+Watching for file changes with StatReloader
+C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\templatetags\index.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Generation 1 | Fitness 0.0167 | Conflicts 59
+Generation 2 | Fitness 0.0179 | Conflicts 55
+Generation 3 | Fitness 0.0182 | Conflicts 54
+Generation 4 | Fitness 0.0182 | Conflicts 54
+Generation 5 | Fitness 0.0192 | Conflicts 51
+Generation 6 | Fitness 0.0192 | Conflicts 51
+Generation 7 | Fitness 0.0200 | Conflicts 49
+Generation 8 | Fitness 0.0200 | Conflicts 49
+Generation 9 | Fitness 0.0204 | Conflicts 48
+Generation 10 | Fitness 0.0213 | Conflicts 46
+Generation 11 | Fitness 0.0217 | Conflicts 45
+Generation 12 | Fitness 0.0217 | Conflicts 45
+Generation 13 | Fitness 0.0222 | Conflicts 44
+Generation 14 | Fitness 0.0227 | Conflicts 43
+Generation 15 | Fitness 0.0233 | Conflicts 42
+Generation 16 | Fitness 0.0238 | Conflicts 41
+Generation 17 | Fitness 0.0244 | Conflicts 40
+Generation 18 | Fitness 0.0244 | Conflicts 40
+Generation 19 | Fitness 0.0244 | Conflicts 40
+Generation 20 | Fitness 0.0250 | Conflicts 39
+Generation 21 | Fitness 0.0250 | Conflicts 39
+Generation 22 | Fitness 0.0250 | Conflicts 39
+Generation 23 | Fitness 0.0250 | Conflicts 39
+Generation 24 | Fitness 0.0250 | Conflicts 39
+Generation 25 | Fitness 0.0250 | Conflicts 39
+Generation 26 | Fitness 0.0250 | Conflicts 39
+Generation 27 | Fitness 0.0250 | Conflicts 39
+Generation 28 | Fitness 0.0256 | Conflicts 38
+Generation 29 | Fitness 0.0263 | Conflicts 37
+Generation 30 | Fitness 0.0263 | Conflicts 37
+Generation 31 | Fitness 0.0263 | Conflicts 37
+Generation 32 | Fitness 0.0263 | Conflicts 37
+Generation 33 | Fitness 0.0263 | Conflicts 37
+Generation 34 | Fitness 0.0263 | Conflicts 37
+Generation 35 | Fitness 0.0263 | Conflicts 37
+Generation 36 | Fitness 0.0263 | Conflicts 37
+Generation 37 | Fitness 0.0263 | Conflicts 37
+Generation 38 | Fitness 0.0263 | Conflicts 37
+Generation 39 | Fitness 0.0263 | Conflicts 37
+Generation 40 | Fitness 0.0263 | Conflicts 37
+Generation 41 | Fitness 0.0263 | Conflicts 37
+Generation 42 | Fitness 0.0263 | Conflicts 37
+Generation 43 | Fitness 0.0263 | Conflicts 37
+Generation 44 | Fitness 0.0278 | Conflicts 35
+Generation 45 | Fitness 0.0278 | Conflicts 35
+Generation 46 | Fitness 0.0286 | Conflicts 34
+Generation 47 | Fitness 0.0286 | Conflicts 34
+Generation 48 | Fitness 0.0286 | Conflicts 34
+Generation 49 | Fitness 0.0286 | Conflicts 34
+Generation 50 | Fitness 0.0286 | Conflicts 34
+Generation 51 | Fitness 0.0286 | Conflicts 34
+Generation 52 | Fitness 0.0286 | Conflicts 34
+Generation 53 | Fitness 0.0286 | Conflicts 34
+Generation 54 | Fitness 0.0286 | Conflicts 34
+Generation 55 | Fitness 0.0286 | Conflicts 34
+Generation 56 | Fitness 0.0294 | Conflicts 33
+Generation 57 | Fitness 0.0294 | Conflicts 33
+Generation 58 | Fitness 0.0294 | Conflicts 33
+Generation 59 | Fitness 0.0294 | Conflicts 33
+Generation 60 | Fitness 0.0303 | Conflicts 32
+Generation 61 | Fitness 0.0303 | Conflicts 32
+Generation 62 | Fitness 0.0303 | Conflicts 32
+Generation 63 | Fitness 0.0303 | Conflicts 32
+Generation 64 | Fitness 0.0303 | Conflicts 32
+Generation 65 | Fitness 0.0303 | Conflicts 32
+Generation 66 | Fitness 0.0303 | Conflicts 32
+Generation 67 | Fitness 0.0312 | Conflicts 31
+Generation 68 | Fitness 0.0312 | Conflicts 31
+Generation 69 | Fitness 0.0312 | Conflicts 31
+Generation 70 | Fitness 0.0312 | Conflicts 31
+Generation 71 | Fitness 0.0312 | Conflicts 31
+Generation 72 | Fitness 0.0312 | Conflicts 31
+Generation 73 | Fitness 0.0312 | Conflicts 31
+Generation 74 | Fitness 0.0312 | Conflicts 31
+Generation 75 | Fitness 0.0312 | Conflicts 31
+Generation 76 | Fitness 0.0312 | Conflicts 31
+Generation 77 | Fitness 0.0312 | Conflicts 31
+Generation 78 | Fitness 0.0312 | Conflicts 31
+Generation 79 | Fitness 0.0312 | Conflicts 31
+Generation 80 | Fitness 0.0312 | Conflicts 31
+Generation 81 | Fitness 0.0312 | Conflicts 31
+Generation 82 | Fitness 0.0312 | Conflicts 31
+Generation 83 | Fitness 0.0312 | Conflicts 31
+Generation 84 | Fitness 0.0312 | Conflicts 31
+Generation 85 | Fitness 0.0312 | Conflicts 31
+Generation 86 | Fitness 0.0312 | Conflicts 31
+Generation 87 | Fitness 0.0312 | Conflicts 31
+Generation 88 | Fitness 0.0312 | Conflicts 31
+Generation 89 | Fitness 0.0312 | Conflicts 31
+Generation 90 | Fitness 0.0312 | Conflicts 31
+Generation 91 | Fitness 0.0312 | Conflicts 31
+Generation 92 | Fitness 0.0312 | Conflicts 31
+Generation 93 | Fitness 0.0312 | Conflicts 31
+Generation 94 | Fitness 0.0312 | Conflicts 31
+Generation 95 | Fitness 0.0312 | Conflicts 31
+Generation 96 | Fitness 0.0312 | Conflicts 31
+Generation 97 | Fitness 0.0312 | Conflicts 31
+Generation 98 | Fitness 0.0312 | Conflicts 31
+Generation 99 | Fitness 0.0312 | Conflicts 31
+Generation 100 | Fitness 0.0312 | Conflicts 31
+Watching for file changes with StatReloader
