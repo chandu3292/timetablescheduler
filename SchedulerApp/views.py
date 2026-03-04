@@ -117,16 +117,43 @@ class Schedule:
     def addCourse(self, data, course, courses, dept, section):
         newClass = Class(dept, section.section_id, course)
 
-        newClass.set_meetingTime(
-            data.get_meetingTimes()[random.randrange(0, len(data.get_meetingTimes()))])
+        # Enforce lab sessions as continuous blocks
+        if course.course_type == 'Lab' and course.lab_length in [2, 3]:
+            # Find all meeting times grouped by day
+            meeting_times_by_day = {}
+            for mt in data.get_meetingTimes():
+                meeting_times_by_day.setdefault(mt.day, []).append(mt)
+            # Sort time slots within each day
+            for day in meeting_times_by_day:
+                meeting_times_by_day[day].sort(key=lambda mt: mt.time)
+            # Try to find a day with enough consecutive slots
+            assigned = False
+            for day, slots in meeting_times_by_day.items():
+                for i in range(len(slots) - course.lab_length + 1):
+                    consecutive = True
+                    for j in range(course.lab_length - 1):
+                        t1 = slots[i + j].time
+                        t2 = slots[i + j + 1].time
+                        # Check if slots are consecutive (naive string check, assumes sorted times)
+                        if t1.split('-')[1].strip() != t2.split('-')[0].strip():
+                            consecutive = False
+                            break
+                    if consecutive:
+                        # Assign the first slot of the block
+                        newClass.set_meetingTime(slots[i])
+                        assigned = True
+                        break
+                if assigned:
+                    break
+            if not assigned:
+                # Fallback: assign any random slot
+                newClass.set_meetingTime(data.get_meetingTimes()[random.randrange(0, len(data.get_meetingTimes()))])
+        else:
+            newClass.set_meetingTime(data.get_meetingTimes()[random.randrange(0, len(data.get_meetingTimes()))])
 
-        newClass.set_room(
-            data.get_rooms()[random.randrange(0, len(data.get_rooms()))])
-
+        newClass.set_room(data.get_rooms()[random.randrange(0, len(data.get_rooms()))])
         crs_inst = course.instructors.all()
-        newClass.set_instructor(
-            crs_inst[random.randrange(0, len(crs_inst))])
-
+        newClass.set_instructor(crs_inst[random.randrange(0, len(crs_inst))])
         self._classes.append(newClass)
 
     def initialize(self):

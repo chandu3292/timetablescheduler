@@ -1,5 +1,10 @@
 from django.forms import ModelForm
 from .models import *
+
+class SectionCourseAssignmentForm(ModelForm):
+    class Meta:
+        model = SectionCourseAssignment
+        fields = ['section', 'course', 'instructor']
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 
@@ -69,4 +74,4 @@ class SectionForm(ModelForm):
     class Meta:
         model = Section
         labels = {'num_class_in_week': 'Total classes in a week'}
-        fields = ['section_id', 'department', 'num_class_in_week']
+        fields = ['section_id', 'department', 'num_class_in_week', 'year']

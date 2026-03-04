@@ -31,6 +31,18 @@ DAYS_OF_WEEK = (
 )
     # ('Saturday', 'Saturday'),
 
+ACADEMIC_YEARS = (
+    ('1st Year', '1st Year'),
+    ('2nd Year', '2nd Year'),
+    ('3rd Year', '3rd Year'),
+    ('4th Year', '4th Year'),
+)
+
+COURSE_TYPES = (
+    ('Lecture', 'Lecture'),
+    ('Lab', 'Lab'),
+)
+
 
 class Room(models.Model):
     r_number = models.CharField(max_length=6)
@@ -64,6 +76,8 @@ class Course(models.Model):
     course_name = models.CharField(max_length=40)
     max_numb_students = models.CharField(max_length=65)
     instructors = models.ManyToManyField(Instructor)
+    course_type = models.CharField(max_length=10, choices=COURSE_TYPES, default='Lecture')
+    lab_length = models.IntegerField(default=0, help_text="Length in hours (e.g., 2 or 3) if it's a lab")
 
     def __str__(self):
         return f'{self.course_number} {self.course_name}'
@@ -85,6 +99,7 @@ class Section(models.Model):
     section_id = models.CharField(max_length=25, primary_key=True)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     num_class_in_week = models.IntegerField(default=0)
+    year = models.CharField(max_length=10, choices=ACADEMIC_YEARS, default='1st Year')
     course = models.ForeignKey(Course,
                                on_delete=models.CASCADE,
                                blank=True,
@@ -116,6 +131,18 @@ class Section(models.Model):
         section = Section.objects.get(pk=self.section_id)
         section.instructor = instructor
         section.save()
+
+
+class SectionCourseAssignment(models.Model):
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.section.section_id} - {self.course.course_name} - {self.instructor.name}"
+
+    class Meta:
+        unique_together = ('section', 'course')
 
 
 '''
