@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
-{% block content %}
 {% load static %}
 
-
+{% block content %}
 
 <form method="post">
   {% csrf_token %}
   <fieldset>
     <div class="tablink">
-      <h1 onclick="openPage('new')" id="defaultOpen">Add Department</h1>
-      <a href="{% url 'departmentEdit' %}">
-        <h1 onclick="openPage('edit')" id="link_to_edit">Edit Department</h1>
+      <h1 id="defaultOpen">Add Year</h1>
+      <a href="{% url 'yearEdit' %}">
+        <h1 id="link_to_edit">Edit Year</h1>
       </a>
     </div>
+
     <div class="tabcontent" id="new">
       {{ form.as_p }}
       <input type="submit" value="Submit" class="submit">

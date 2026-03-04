@@ -1,0 +1,37 @@
+﻿
+============================================================
+CONTINUOUS BLOCK SCHEDULING TEST
+============================================================
+
+
+Scheduled 114 total classes
+
+Course     Type     Section  Scheduled    Required   Status
+----------------------------------------------------------------------
+python : Traceback (most recent call last):
+At line:1 char:66
++ ... scheduler'; python -c "exec(open('test_continuous.py', encoding='utf- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last) 
+   ::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "<string>", line 1, in <module>
+  File "<string>", line 47, in <module>
+  File "C:\Users\M srujitha\AppData\Roaming\Python\Python312\site-packages\colo
+rama\ansitowin32.py", line 47, in write
+    self.__convertor.write(text)
+  File "C:\Users\M srujitha\AppData\Roaming\Python\Python312\site-packages\colo
+rama\ansitowin32.py", line 177, in write
+    self.write_and_convert(text)
+  File "C:\Users\M srujitha\AppData\Roaming\Python\Python312\site-packages\colo
+rama\ansitowin32.py", line 205, in write_and_convert
+    self.write_plain_text(text, cursor, len(text))
+  File "C:\Users\M srujitha\AppData\Roaming\Python\Python312\site-packages\colo
+rama\ansitowin32.py", line 210, in write_plain_text
+    self.wrapped.write(text[start:end])
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in 
+position 53: character maps to <undefined>

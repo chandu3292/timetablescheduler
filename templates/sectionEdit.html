@@ -1,23 +1,22 @@
 {% extends 'base.html' %}
-{% block content %}
 {% load static %}
 
-
-
+{% block content %}
 
 <fieldset class="fieldset">
   <div class="tablink">
-    <a href="{% url 'sectionAdd'%}">
-      <h1 onclick="openPage('new')" id="defaultOpen">Add Section</h1>
+    <a href="{% url 'sectionAdd' %}">
+      <h1 id="defaultOpen">Add Section</h1>
     </a>
-    <h1 onclick="openPage('edit')" id="link_to_edit">Edit Section</h1>
+    <h1 id="link_to_edit">Edit Section</h1>
   </div>
+
   <div class="tabcontent" id="edit">
     <table class="editTable">
       <thead>
         <tr class="table-headers">
           <th>Section Id</th>
-          <th>Department</th>
+          <th>Year</th>
           <th>Total Classes</th>
           <th class="empty"></th>
         </tr>
@@ -26,9 +25,9 @@
       <tbody>
         {% for sec in sections %}
         <tr>
-          <td>{{sec.section_id}}</td>
-          <td>{{sec.department}}</td>
-          <td>{{sec.num_class_in_week }}</td>
+          <td>{{ sec.section_id }}</td>
+          <td>{{ sec.year.year_name }}</td>
+          <td>{{ sec.num_class_in_week }}</td>
           <td class="empty">
             <form action="{% url 'deletesection' sec.section_id %}" method="post">
               {% csrf_token %}
@@ -38,7 +37,6 @@
         </tr>
         {% endfor %}
       </tbody>
-
     </table>
   </div>
 </fieldset>

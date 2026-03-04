@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+.diagnostic-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.status-box {
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+.status-ready {
+    background: #e8f5e9;
+    border-color: #4caf50;
+}
+.status-issues {
+    background: #fff3e0;
+    border-color: #ff9800;
+}
+.data-section {
+    background: #f5f5f5;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 5px;
+}
+.data-section h3 {
+    margin-top: 0;
+    color: #1976d2;
+}
+.issue-item {
+    background: #ffebee;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 4px;
+    border-left: 3px solid #f44336;
+}
+.count-badge {
+    background: #2196f3;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    margin-left: 10px;
+}
+.course-item, .section-item, .time-item {
+    background: white;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 4px;
+    border-left: 3px solid #4caf50;
+}
+.assignment-item {
+    background: #e3f2fd;
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 4px;
+    font-size: 14px;
+}
+</style>
+
+<div class="diagnostic-container">
+    <h1>📊 Data Check for {{ year.year_name }}</h1>
+    
+    {% if ready %}
+    <div class="status-box status-ready">
+        <h2>✅ All Data Ready!</h2>
+        <p>Your system has all the required data for timetable generation.</p>
+        <a href="{% url 'timetable' %}?year={{ year.id }}" class="btn" style="background: #4caf50;">Generate Timetable</a>
+    </div>
+    {% else %}
+    <div class="status-box status-issues">
+        <h2>⚠️ Issues Found ({{ issues|length }})</h2>
+        <p>Please fix the following issues before generating timetable:</p>
+        {% for issue in issues %}
+        <div class="issue-item">{{ issue }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="data-section">
+        <h3>📚 Courses <span class="count-badge">{{ year_courses.count }}</span></h3>
+        {% if year_courses %}
+            {% for course in year_courses %}
+            <div class="course-item">
+                <strong>{{ course.course_number }} - {{ course.course_name }}</strong><br>
+                <small>
+                    Type: {{ course.course_type }} | 
+                    Hours/Week: {{ course.hours_per_week }} | 
+                    Continuous: {{ course.max_continuous_hours }} | 
+                    Priority: {{ course.priority }}
+                </small>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>❌ No courses linked to this year. <a href="{% url 'yearEdit' %}">Edit Year</a> to add courses.</p>
+        {% endif %}
+    </div>
+
+    <div class="data-section">
+        <h3>👥 Sections <span class="count-badge">3</span></h3>
+        <p>✅ {{ year.year_name }} has 3 sections (Section 1, Section 2, Section 3)</p>
+    </div>
+
+    <div class="data-section">
+        <h3>⏰ Meeting Times <span class="count-badge">{{ year_meeting_times.count }}</span></h3>
+        {% if year_meeting_times %}
+            {% for mt in year_meeting_times %}
+            <div class="time-item">
+                <strong>{{ mt.pid }}</strong> - {{ mt.day }} {{ mt.time }}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>❌ No meeting times for this year. <a href="{% url 'meetingTimeAdd' %}">Add Meeting Times</a> and select "{{ year.year_name }}"</p>
+        {% endif %}
+    </div>
+
+    <div class="data-section">
+        <h3>🔬 Lab Rooms <span class="count-badge">{{ total_lab_rooms }}</span></h3>
+        {% if total_lab_rooms > 0 %}
+            <p>✅ {{ total_lab_rooms }} lab room(s) available</p>
+        {% else %}
+            <p>⚠️ No lab rooms. <a href="{% url 'labRoomAdd' %}">Add Lab Rooms</a> if you have LAB courses</p>
+        {% endif %}
+    </div>
+
+    <div class="data-section">
+        <h3>👨‍🏫 Instructors <span class="count-badge">{{ total_instructors }}</span></h3>
+        {% if total_instructors > 0 %}
+            <p>✅ {{ total_instructors }} instructor(s) available</p>
+        {% else %}
+            <p>❌ No instructors. <a href="{% url 'instructorAdd' %}">Add Instructors</a></p>
+        {% endif %}
+    </div>
+
+    <div class="data-section">
+        <h3>📝 Course-Instructor Assignments <span class="count-badge">{{ all_assignments.count }}</span></h3>
+        {% if all_assignments %}
+            {% for assignment in all_assignments %}
+            <div class="assignment-item">
+                <strong>{{ assignment.year.year_name }} - Section {{ assignment.section_number }}</strong>: 
+                {{ assignment.course.course_number }} ({{ assignment.course.course_name }}) 
+                → 
+                {% if assignment.instructors.all %}
+                    {% for instructor in assignment.instructors.all %}
+                        {{ instructor.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <span style="color: red;">No instructor assigned</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>❌ No instructor assignments. Assignments created automatically when adding courses with instructors.</p>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 30px; text-align: center;">
+        <a href="{% url 'data_check' %}" class="btn">Back to Year Selection</a>
+        <a href="{% url 'home' %}" class="btn">Home</a>
+        {% if ready %}
+        <a href="{% url 'timetable' %}?year={{ year.id }}" class="btn" style="background: #4caf50;">Generate Timetable</a>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

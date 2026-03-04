@@ -1,35 +1,40 @@
 {% extends 'base.html' %}
-{% block content %}
 {% load static %}
 {% load index %}
 
-
-
+{% block content %}
 
 <fieldset class="fieldset">
   <div class="tablink">
-    <a href="{% url 'departmentAdd'%}">
-      <h1 onclick="openPage('new')" id="defaultOpen">Add Department</h1>
+    <a href="{% url 'yearAdd' %}">
+      <h1 id="defaultOpen">Add Year</h1>
     </a>
-    <h1 onclick="openPage('edit')" id="link_to_edit">Edit Department</h1>
+    <h1 id="link_to_edit">Edit Year</h1>
   </div>
+
   <div class="tabcontent" id="edit">
     <table class="editTable">
       <thead>
         <tr class="table-headers">
-          <th>Department</th>
+          <th>Year</th>
           <th>Courses</th>
           <th class="empty"></th>
         </tr>
       </thead>
 
       <tbody>
-        {% for dept in departments %}
+        {% for year in years %}
         <tr>
-          <td>{{dept.dept_name}}</td>
-          <td>{{course|dictKey:dept.dept_name}}</td>
+          <td>{{ year.year_name }}</td>
+          <td>
+            {% for course in year.courses.all %}
+              {{ course.course_name }}{% if not forloop.last %}, {% endif %}
+            {% empty %}
+              No courses
+            {% endfor %}
+          </td>
           <td class="empty">
-            <form action="{% url 'deletedepartment' dept.id %}" method="post">
+            <form action="{% url 'yearDelete' year.id %}" method="post">
               {% csrf_token %}
               <input type="submit" value="X" class="cross">
             </form>

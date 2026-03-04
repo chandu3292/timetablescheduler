@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+{% load index %}
+
+<div style="margin-bottom:20px;">
+  <a href="{% url 'timetable' %}" class="btn">Back to Timetable</a>
+  <a href="{% url 'instructor_timetable' %}" class="btn">Instructor View</a>
+</div>
+
+<h1 style="text-align: center; margin-bottom: 30px;">Lab Room Timetable</h1>
+
+<div>
+  {% for lab in labs %}
+  <h2 class="secHead">{{ lab.lab_name }} (Capacity: {{ lab.seating_capacity }})</h2>
+
+  <table class="timetable">
+    <thead>
+      <tr>
+        <th>Day</th>
+        {% for time in timeSlots %}
+          <th>{{time.0}}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for week in weekDays %}
+      <tr>
+        <!-- Day name -->
+        <th>{{week.0}}</th>
+
+        {% for time in timeSlots %}
+
+          <!-- LUNCH SLOT -->
+          {% if time.0 == "12:15 - 1:05" %}
+              {% if forloop.parentloop.first %}
+                <td rowspan="{{ weekDays|length }}" class="lunch">
+                    <b>LUNCH<br>BREAK</b>
+                </td>
+              {% endif %}
+
+          {% else %}
+              <td>
+                {% for class in schedule %}
+                  {% if class.room.lab_name == lab.lab_name and class.meeting_time.day == week.0 and class.meeting_time.time == time.0 %}
+                    <div class="class-info">
+                      <strong>{{ class.course.course_name }}</strong><br>
+                      <small>{{ class.year.year_name }} - Section {{ class.section_number }}<br>{{ class.instructor.name }}</small>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </td>
+          {% endif %}
+
+        {% endfor %}
+
+      </tr>
+      {% endfor %}
+    </tbody>
+
+  </table>
+  {% endfor %}
+</div>
+
+<style>
+.class-info {
+  background: #4CAF50;
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.lunch {
+  background: #FFB74D !important;
+  color: #333;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
+}
+</style>
+
+{% endblock %}

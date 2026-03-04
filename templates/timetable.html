@@ -4,32 +4,96 @@
 {% load index %}
 
 <div style="margin-bottom:20px;">
-  <a href="{% url 'instructor_timetable' %}" class="btn">Instructor View</a>
+  <a href="{% url 'instructor_timetable_select' %}" class="btn">Instructor View</a>
+  <a href="{% url 'lab_timetable' %}" class="btn">Lab View</a>
+  {% if from_database and selected_year %}
+    <a href="{% url 'download_timetable_pdf' %}?year={{ selected_year.id }}" class="btn" style="background: #4CAF50; color: white;">📥 Download PDF</a>
+    <a href="?year={{ selected_year.id }}&regenerate=true" class="btn" style="background: #ff9800;">Regenerate Timetable</a>
+  {% endif %}
 </div>
 
+{% if error_message %}
+<div style="background: #ffebee; border: 2px solid #f44336; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #c62828;">
+  <h3 style="margin: 0; color: #c62828;">⚠️ Generation Failed</h3>
+  <p style="margin: 10px 0 0 0;">{{ error_message }}</p>
+  {% if failed_fitness %}
+    <p style="margin: 5px 0 0 0;"><strong>Failed fitness:</strong> {{ failed_fitness|floatformat:4 }}%</p>
+  {% endif %}
+  <p style="margin: 10px 0 0 0; font-size: 0.9em;">
+    <strong>Suggestions:</strong>
+    <ul style="margin: 5px 0 0 20px;">
+      <li>Check <a href="{% url 'data_check' %}?year={{ selected_year.id }}" style="color: #1976d2;">Data Check</a> for missing assignments</li>
+      <li>Ensure all courses have instructors assigned</li>
+      <li>Verify room and time slot availability</li>
+    </ul>
+  </p>
+</div>
+{% endif %}
+
+{% if fitness_score and generation_count %}
+<div style="background: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+  <h3 style="margin: 0;">Timetable for {{ selected_year.year_name }}</h3>
+  <p style="margin: 5px 0;">
+    <strong>Fitness Score:</strong> {{ fitness_score|floatformat:2 }}% 
+    | <strong>Generations:</strong> {{ generation_count }}
+    {% if from_database %}
+    | <strong>Status:</strong> Loaded from Database
+    | <strong>Generated:</strong> {{ generated_at|date:"Y-m-d H:i" }}
+    {% else %}
+    | <strong>Status:</strong> Newly Generated & Saved
+    {% endif %}
+  </p>
+</div>
+{% endif %}
+
 <div>
-  {% for section in sections %}
-  <h2 class="secHead">{{ section.section_id }} ({{ section.department }})</h2>
+  {% for section_number in sections %}
+  <h2 class="secHead">{{ selected_year.year_name }} - Section {{ section_number }}</h2>
+
   <table class="timetable">
     <thead>
       <tr>
         <th>Class #</th>
         {% for time in timeSlots %}
-        <th>{{time.0}}</th>
+          <th>{{time.0}}</th>
         {% endfor %}
       </tr>
     </thead>
 
+    <!-- ✅ MODIFIED TBODY -->
     <tbody>
       {% for week in weekDays %}
       <tr>
+
+        <!-- Day name -->
         <th>{{week.0}}</th>
+
         {% for time in timeSlots %}
-        <td>{% sub schedule section.section_id week.0 time.0 %}</td>
+
+          <!-- 🔥 LUNCH SLOT -->
+          {% if time.0 == "12:15 - 1:05" %}
+
+              {% if forloop.parentloop.first %}
+                <td rowspan="{{ weekDays|length }}" class="lunch">
+                    <b>LUNCH<br>BREAK</b>
+                </td>
+              {% endif %}
+
+          {% else %}
+
+              <td>
+                {% sub schedule section_number week.0 time.0 %}
+              </td>
+
+          {% endif %}
+
         {% endfor %}
+
       </tr>
       {% endfor %}
     </tbody>
+    <!-- END -->
+
   </table>
   {% endfor %}
 </div>

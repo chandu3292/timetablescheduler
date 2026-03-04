@@ -1,181 +1,229 @@
-Watching for file changes with StatReloader
-Generation 1 | Fitness 0.0588 | Conflicts 16
-Generation 2 | Fitness 0.0714 | Conflicts 13
-Generation 3 | Fitness 0.0833 | Conflicts 11
-Generation 4 | Fitness 0.1000 | Conflicts 9
-Generation 5 | Fitness 0.1000 | Conflicts 9
-Generation 6 | Fitness 0.1111 | Conflicts 8
-Generation 7 | Fitness 0.1250 | Conflicts 7
-Generation 8 | Fitness 0.1667 | Conflicts 5
-Generation 9 | Fitness 0.2000 | Conflicts 4
-Generation 10 | Fitness 0.2000 | Conflicts 4
-Generation 11 | Fitness 0.2000 | Conflicts 4
-Generation 12 | Fitness 0.2500 | Conflicts 3
-Generation 13 | Fitness 0.3333 | Conflicts 2
-Generation 14 | Fitness 0.3333 | Conflicts 2
-Generation 15 | Fitness 0.3333 | Conflicts 2
-Generation 16 | Fitness 0.3333 | Conflicts 2
-Generation 17 | Fitness 0.3333 | Conflicts 2
-Generation 18 | Fitness 0.5000 | Conflicts 1
-Generation 19 | Fitness 0.5000 | Conflicts 1
-Generation 20 | Fitness 0.5000 | Conflicts 1
-Generation 21 | Fitness 0.5000 | Conflicts 1
-Generation 22 | Fitness 0.5000 | Conflicts 1
-Generation 23 | Fitness 0.5000 | Conflicts 1
-Generation 24 | Fitness 0.5000 | Conflicts 1
-Generation 25 | Fitness 0.5000 | Conflicts 1
-Generation 26 | Fitness 0.5000 | Conflicts 1
-Generation 27 | Fitness 0.5000 | Conflicts 1
-Generation 28 | Fitness 0.5000 | Conflicts 1
-Generation 29 | Fitness 0.5000 | Conflicts 1
-Generation 30 | Fitness 0.5000 | Conflicts 1
-Generation 31 | Fitness 0.5000 | Conflicts 1
-Generation 32 | Fitness 1.0000 | Conflicts 0
-Generation 1 | Fitness 0.0526 | Conflicts 18
-Generation 2 | Fitness 0.0625 | Conflicts 15
-Generation 3 | Fitness 0.0625 | Conflicts 15
-Generation 4 | Fitness 0.0667 | Conflicts 14
-Generation 5 | Fitness 0.0667 | Conflicts 14
-Generation 6 | Fitness 0.0833 | Conflicts 11
-Generation 7 | Fitness 0.0833 | Conflicts 11
-Generation 8 | Fitness 0.0833 | Conflicts 11
-Generation 9 | Fitness 0.0909 | Conflicts 10
-Generation 10 | Fitness 0.1000 | Conflicts 9
-Generation 11 | Fitness 0.1250 | Conflicts 7
-Generation 12 | Fitness 0.1250 | Conflicts 7
-Generation 13 | Fitness 0.1667 | Conflicts 5
-Generation 14 | Fitness 0.2000 | Conflicts 4
-Generation 15 | Fitness 0.2000 | Conflicts 4
-Generation 16 | Fitness 0.2000 | Conflicts 4
-Generation 17 | Fitness 0.3333 | Conflicts 2
-Generation 18 | Fitness 0.3333 | Conflicts 2
-Generation 19 | Fitness 0.3333 | Conflicts 2
-Generation 20 | Fitness 0.3333 | Conflicts 2
-Generation 21 | Fitness 0.3333 | Conflicts 2
-Generation 22 | Fitness 0.5000 | Conflicts 1
-Generation 23 | Fitness 0.5000 | Conflicts 1
-Generation 24 | Fitness 0.5000 | Conflicts 1
-Generation 25 | Fitness 0.5000 | Conflicts 1
-Generation 26 | Fitness 0.5000 | Conflicts 1
-Generation 27 | Fitness 0.5000 | Conflicts 1
-Generation 28 | Fitness 0.5000 | Conflicts 1
-Generation 29 | Fitness 0.5000 | Conflicts 1
-Generation 30 | Fitness 0.5000 | Conflicts 1
-Generation 31 | Fitness 0.5000 | Conflicts 1
-Generation 32 | Fitness 0.5000 | Conflicts 1
-Generation 33 | Fitness 1.0000 | Conflicts 0
-Watching for file changes with StatReloader
-Watching for file changes with StatReloader
-Not Found: /favicon.ico
-C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\models.py changed, reloading.
-Watching for file changes with StatReloader
-C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\models.py changed, reloading.
-Watching for file changes with StatReloader
-C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\models.py changed, reloading.
-Watching for file changes with StatReloader
-C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\models.py changed, reloading.
-Watching for file changes with StatReloader
-C:\Users\karri\OneDrive\Desktop\ttss\SchedulerApp\templatetags\index.py changed, reloading.
-Watching for file changes with StatReloader
-Watching for file changes with StatReloader
-Generation 1 | Fitness 0.0167 | Conflicts 59
-Generation 2 | Fitness 0.0179 | Conflicts 55
-Generation 3 | Fitness 0.0182 | Conflicts 54
-Generation 4 | Fitness 0.0182 | Conflicts 54
-Generation 5 | Fitness 0.0192 | Conflicts 51
-Generation 6 | Fitness 0.0192 | Conflicts 51
-Generation 7 | Fitness 0.0200 | Conflicts 49
-Generation 8 | Fitness 0.0200 | Conflicts 49
-Generation 9 | Fitness 0.0204 | Conflicts 48
-Generation 10 | Fitness 0.0213 | Conflicts 46
-Generation 11 | Fitness 0.0217 | Conflicts 45
-Generation 12 | Fitness 0.0217 | Conflicts 45
-Generation 13 | Fitness 0.0222 | Conflicts 44
-Generation 14 | Fitness 0.0227 | Conflicts 43
-Generation 15 | Fitness 0.0233 | Conflicts 42
-Generation 16 | Fitness 0.0238 | Conflicts 41
-Generation 17 | Fitness 0.0244 | Conflicts 40
-Generation 18 | Fitness 0.0244 | Conflicts 40
-Generation 19 | Fitness 0.0244 | Conflicts 40
-Generation 20 | Fitness 0.0250 | Conflicts 39
-Generation 21 | Fitness 0.0250 | Conflicts 39
-Generation 22 | Fitness 0.0250 | Conflicts 39
-Generation 23 | Fitness 0.0250 | Conflicts 39
-Generation 24 | Fitness 0.0250 | Conflicts 39
-Generation 25 | Fitness 0.0250 | Conflicts 39
-Generation 26 | Fitness 0.0250 | Conflicts 39
-Generation 27 | Fitness 0.0250 | Conflicts 39
-Generation 28 | Fitness 0.0256 | Conflicts 38
-Generation 29 | Fitness 0.0263 | Conflicts 37
-Generation 30 | Fitness 0.0263 | Conflicts 37
-Generation 31 | Fitness 0.0263 | Conflicts 37
-Generation 32 | Fitness 0.0263 | Conflicts 37
-Generation 33 | Fitness 0.0263 | Conflicts 37
-Generation 34 | Fitness 0.0263 | Conflicts 37
-Generation 35 | Fitness 0.0263 | Conflicts 37
-Generation 36 | Fitness 0.0263 | Conflicts 37
-Generation 37 | Fitness 0.0263 | Conflicts 37
-Generation 38 | Fitness 0.0263 | Conflicts 37
-Generation 39 | Fitness 0.0263 | Conflicts 37
-Generation 40 | Fitness 0.0263 | Conflicts 37
-Generation 41 | Fitness 0.0263 | Conflicts 37
-Generation 42 | Fitness 0.0263 | Conflicts 37
-Generation 43 | Fitness 0.0263 | Conflicts 37
-Generation 44 | Fitness 0.0278 | Conflicts 35
-Generation 45 | Fitness 0.0278 | Conflicts 35
-Generation 46 | Fitness 0.0286 | Conflicts 34
-Generation 47 | Fitness 0.0286 | Conflicts 34
-Generation 48 | Fitness 0.0286 | Conflicts 34
-Generation 49 | Fitness 0.0286 | Conflicts 34
-Generation 50 | Fitness 0.0286 | Conflicts 34
-Generation 51 | Fitness 0.0286 | Conflicts 34
-Generation 52 | Fitness 0.0286 | Conflicts 34
-Generation 53 | Fitness 0.0286 | Conflicts 34
-Generation 54 | Fitness 0.0286 | Conflicts 34
-Generation 55 | Fitness 0.0286 | Conflicts 34
-Generation 56 | Fitness 0.0294 | Conflicts 33
-Generation 57 | Fitness 0.0294 | Conflicts 33
-Generation 58 | Fitness 0.0294 | Conflicts 33
-Generation 59 | Fitness 0.0294 | Conflicts 33
-Generation 60 | Fitness 0.0303 | Conflicts 32
-Generation 61 | Fitness 0.0303 | Conflicts 32
-Generation 62 | Fitness 0.0303 | Conflicts 32
-Generation 63 | Fitness 0.0303 | Conflicts 32
-Generation 64 | Fitness 0.0303 | Conflicts 32
-Generation 65 | Fitness 0.0303 | Conflicts 32
-Generation 66 | Fitness 0.0303 | Conflicts 32
-Generation 67 | Fitness 0.0312 | Conflicts 31
-Generation 68 | Fitness 0.0312 | Conflicts 31
-Generation 69 | Fitness 0.0312 | Conflicts 31
-Generation 70 | Fitness 0.0312 | Conflicts 31
-Generation 71 | Fitness 0.0312 | Conflicts 31
-Generation 72 | Fitness 0.0312 | Conflicts 31
-Generation 73 | Fitness 0.0312 | Conflicts 31
-Generation 74 | Fitness 0.0312 | Conflicts 31
-Generation 75 | Fitness 0.0312 | Conflicts 31
-Generation 76 | Fitness 0.0312 | Conflicts 31
-Generation 77 | Fitness 0.0312 | Conflicts 31
-Generation 78 | Fitness 0.0312 | Conflicts 31
-Generation 79 | Fitness 0.0312 | Conflicts 31
-Generation 80 | Fitness 0.0312 | Conflicts 31
-Generation 81 | Fitness 0.0312 | Conflicts 31
-Generation 82 | Fitness 0.0312 | Conflicts 31
-Generation 83 | Fitness 0.0312 | Conflicts 31
-Generation 84 | Fitness 0.0312 | Conflicts 31
-Generation 85 | Fitness 0.0312 | Conflicts 31
-Generation 86 | Fitness 0.0312 | Conflicts 31
-Generation 87 | Fitness 0.0312 | Conflicts 31
-Generation 88 | Fitness 0.0312 | Conflicts 31
-Generation 89 | Fitness 0.0312 | Conflicts 31
-Generation 90 | Fitness 0.0312 | Conflicts 31
-Generation 91 | Fitness 0.0312 | Conflicts 31
-Generation 92 | Fitness 0.0312 | Conflicts 31
-Generation 93 | Fitness 0.0312 | Conflicts 31
-Generation 94 | Fitness 0.0312 | Conflicts 31
-Generation 95 | Fitness 0.0312 | Conflicts 31
-Generation 96 | Fitness 0.0312 | Conflicts 31
-Generation 97 | Fitness 0.0312 | Conflicts 31
-Generation 98 | Fitness 0.0312 | Conflicts 31
-Generation 99 | Fitness 0.0312 | Conflicts 31
-Generation 100 | Fitness 0.0312 | Conflicts 31
-Watching for file changes with StatReloader
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+>>> Selected year: 2nd Year (ID: 12)
+Pre-allocating times for 0 elective courses...
+=== COURSES TO BE SCHEDULED ===
+LAB (5): ['IT216', 'IT217', 'IT218', 'IT219', 'IT220']
+ELECTIVE (0): []
+THEORY (5): ['IT211', 'IT212', 'IT213', 'IT214', 'IT215']
+>>> Starting CONSTRAINT-BASED scheduling (guaranteed conflict-free!)
+Attempt 1/10...
+?? Scheduling 5 LABs, 0 ELECTIVEs, 5 THEORY courses
+  Scheduling IT216 (Sec 1): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 21 valid blocks available
+  Scheduling IT216 (Sec 2): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 19 valid blocks available
+  Scheduling IT216 (Sec 3): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 18 valid blocks available
+  Scheduling IT217 (Sec 1): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 19 valid blocks available
+  Scheduling IT217 (Sec 2): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 20 valid blocks available
+  Scheduling IT217 (Sec 3): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT218 (Sec 1): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 17 valid blocks available
+  Scheduling IT218 (Sec 2): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT218 (Sec 3): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 17 valid blocks available
+  Scheduling IT219 (Sec 1): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 24 valid blocks available
+  Scheduling IT219 (Sec 2): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 22 valid blocks available
+  Scheduling IT219 (Sec 3): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 22 valid blocks available
+  Scheduling IT220 (Sec 1): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 22 valid blocks available
+  Scheduling IT220 (Sec 2): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 22 valid blocks available
+  Scheduling IT220 (Sec 3): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 22 valid blocks available
+>>> Saving conflict-free schedule to database...
+>>> Schedule quality: 0.17% fitness, 580 conflicts
+Adding counselling and sports periods...
+Section 1: Added Counselling on Saturday 12:15 - 1:05, Sports on Thursday 11:25 - 12:15
+Section 2: Added Counselling on Friday 9:45 - 10:35, Sports on Thursday 2:45 - 3:35
+Section 3: Added Counselling on Wednesday 1:55 - 2:45, Sports on Thursday 1:05 - 1:55
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+>>> Selected year: 2nd Year (ID: 12)
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+>>> Selected year: 2nd Year (ID: 12)
+Pre-allocating times for 0 elective courses...
+=== COURSES TO BE SCHEDULED ===
+LAB (5): ['IT216', 'IT217', 'IT218', 'IT219', 'IT220']
+ELECTIVE (0): []
+THEORY (5): ['IT211', 'IT212', 'IT213', 'IT214', 'IT215']
+>>> Starting CONSTRAINT-BASED scheduling (guaranteed conflict-free!)
+Attempt 1/10...
+?? Scheduling 5 LABs, 0 ELECTIVEs, 5 THEORY courses
+  Scheduling IT216 (Sec 1): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 21 valid blocks available
+  Scheduling IT216 (Sec 2): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 20 valid blocks available
+  Scheduling IT216 (Sec 3): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 19 valid blocks available
+  Scheduling IT217 (Sec 1): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 19 valid blocks available
+  Scheduling IT217 (Sec 2): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 18 valid blocks available
+  Scheduling IT217 (Sec 3): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 18 valid blocks available
+  Scheduling IT218 (Sec 1): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT218 (Sec 2): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT218 (Sec 3): 1 blocks of 3hr each
+    Found 21 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT219 (Sec 1): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 25 valid blocks available
+  Scheduling IT219 (Sec 2): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 24 valid blocks available
+  Scheduling IT219 (Sec 3): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 22 valid blocks available
+  Scheduling IT220 (Sec 1): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 23 valid blocks available
+  Scheduling IT220 (Sec 2): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 22 valid blocks available
+  Scheduling IT220 (Sec 3): 1 blocks of 2hr each
+    Found 32 continuous 2-hour blocks total
+    After conflict checking: 22 valid blocks available
+>>> Saving conflict-free schedule to database...
+>>> Schedule quality: 0.15% fitness, 680 conflicts
+Adding counselling and sports periods...
+Section 1: Added Counselling on Friday 11:25 - 12:15, Sports on Saturday 1:05 - 1:55
+Section 2: Added Counselling on Saturday 1:55 - 2:45, Sports on Thursday 1:05 - 1:55
+Section 3: Added Counselling on Tuesday 2:45 - 3:35, Sports on Friday 1:05 - 1:55
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+>>> Selected year: 1st Year (ID: 11)
+Pre-allocating times for 0 elective courses...
+=== COURSES TO BE SCHEDULED ===
+LAB (2): ['IT113', 'IT114']
+ELECTIVE (0): []
+THEORY (6): ['IT115', 'IT117', 'IT111', 'IT116', 'IT112', 'IT118']
+>>> Starting CONSTRAINT-BASED scheduling (guaranteed conflict-free!)
+Attempt 1/10...
+?? Scheduling 2 LABs, 0 ELECTIVEs, 6 THEORY courses
+  Scheduling IT113 (Sec 1): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 18 valid blocks available
+  Scheduling IT113 (Sec 2): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT113 (Sec 3): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT114 (Sec 1): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT114 (Sec 2): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 17 valid blocks available
+  Scheduling IT114 (Sec 3): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 15 valid blocks available
+>>> Saving conflict-free schedule to database...
+>>> Schedule quality: 0.10% fitness, 1040 conflicts
+Adding counselling and sports periods...
+Section 1: Added Counselling on Friday 8:45 - 9:45, Sports on Thursday 8:45 - 9:45
+Section 2: Added Counselling on Saturday 11:25 - 12:15, Sports on Tuesday 1:05 - 1:55
+Section 3: Added Counselling on Thursday 2:45 - 3:35, Sports on Tuesday 2:45 - 3:35
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+>>> Selected year: 1st Year (ID: 11)
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+>>> Selected year: 1st Year (ID: 11)
+Pre-allocating times for 0 elective courses...
+=== COURSES TO BE SCHEDULED ===
+LAB (2): ['IT113', 'IT114']
+ELECTIVE (0): []
+THEORY (6): ['IT115', 'IT117', 'IT111', 'IT116', 'IT112', 'IT118']
+>>> Starting CONSTRAINT-BASED scheduling (guaranteed conflict-free!)
+Attempt 1/10...
+?? Scheduling 2 LABs, 0 ELECTIVEs, 6 THEORY courses
+  Scheduling IT113 (Sec 1): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 18 valid blocks available
+  Scheduling IT113 (Sec 2): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT113 (Sec 3): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 15 valid blocks available
+  Scheduling IT114 (Sec 1): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 15 valid blocks available
+  Scheduling IT114 (Sec 2): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 16 valid blocks available
+  Scheduling IT114 (Sec 3): 1 blocks of 3hr each
+    Found 18 continuous 3-hour blocks total
+    After conflict checking: 13 valid blocks available
+>>> Saving conflict-free schedule to database...
+>>> Schedule quality: 0.17% fitness, 580 conflicts
+Adding counselling and sports periods...
+Section 1: Added Counselling on Tuesday 8:45 - 9:45, Sports on Wednesday 11:25 - 12:15
+Section 2: Added Counselling on Wednesday 10:35 - 11:25, Sports on Friday 1:05 - 1:55
+Section 3: Added Counselling on Saturday 2:45 - 3:35, Sports on Friday 2:45 - 3:35
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+>>> Selected year: 1st Year (ID: 11)
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+================================================================================
+TIMETABLE GENERATION - 3-PHASE ALGORITHM (LAB > ELECTIVE > THEORY)
+================================================================================
+>>> Selected year: 2nd Year (ID: 12)

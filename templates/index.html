@@ -21,6 +21,7 @@
             Add your ANITS class details and generate Time Table.</p>
         </div>
         <div class="crdbtn">
+          <a href="{% url 'data_check' %}" class="btn" style="background: #2196f3;">Check Data</a>
           <a href="{% url 'timetable' %}" id='genButton' class="btn" onclick='document.getElementById("loaderClass").style.display="inline-block"'>Generate Timetable</a>
           {% if user.is_authenticated %}
           <div id="loaderClass" class="loaderClass">

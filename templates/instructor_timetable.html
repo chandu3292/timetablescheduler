@@ -4,12 +4,20 @@
 {% load index %}
 
 <div style="margin-bottom:20px;">
-  <a href="{% url 'instructor_timetable' %}" class="btn">Instructor View</a>
+  <a href="{% url 'instructor_timetable_select' %}" class="btn">← Select Different Instructor</a>
+  <a href="{% url 'home' %}" class="btn">Home</a>
+</div>
+
+<div style="background: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+  <h2 style="margin: 0 0 10px 0;">Timetable for {{ instructor.name }}</h2>
+  <p style="margin: 0;">
+    <strong>Instructor ID:</strong> {{ instructor.uid }} | 
+    <strong>Total Classes:</strong> {{ total_classes }}
+  </p>
 </div>
 
 <div>
-  {% for instructor in instructors %}
-  <h2 class="secHead">{{ instructor.name }} ({{ instructor.uid }})</h2>
+  <h2 class="secHead">{{ instructor.name }} - Complete Schedule (All Years)</h2>
 
   <table class="timetable">
     <thead>
@@ -27,15 +35,22 @@
         <th>{{ week.0 }}</th>
         {% for time in timeSlots %}
         <td>
-          {% sub_instructor schedule instructor week.0 time.0 %}
+          {% for class in schedule %}
+            {% if class.meeting_time.day == week.0 and class.meeting_time.time == time.0 %}
+              <div style="background: #009688; color: white; padding: 8px; margin: 2px; border-radius: 4px; font-size: 12px;">
+                <strong>{{ class.course.course_number }}</strong><br>
+                {{ class.course.course_name }}<br>
+                <small>{{ class.year.year_name }} - Section {{ class.section_number }}</small><br>
+                <small>{{ class.room }}</small>
+              </div>
+            {% endif %}
+          {% endfor %}
         </td>
         {% endfor %}
       </tr>
       {% endfor %}
     </tbody>
   </table>
-
-  {% endfor %}
 </div>
 
 {% endblock %}

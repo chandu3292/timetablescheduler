@@ -3,7 +3,11 @@
 {% load static %}
 
 
-
+<div style="margin-bottom: 20px;">
+  <a href="{% url 'instructor_timetable_select' %}" class="btn" style="background: #009688; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+    📅 View Instructor Timetables
+  </a>
+</div>
 
 <fieldset class="fieldset">
   <div class="tablink">
@@ -18,6 +22,7 @@
         <tr class="table-headers">
           <th>UID</th>
           <th>Name</th>
+          <th>Timetable</th>
           <th class="empty"></th>
         </tr>
       </thead>
@@ -27,6 +32,12 @@
         <tr>
           <td>{{inst.uid}}</td>
           <td>{{inst.name}}</td>
+          <td>
+            <a href="{% url 'instructor_timetable' %}?instructor={{inst.id}}" 
+               style="background: #4CAF50; color: white; padding: 5px 15px; text-decoration: none; border-radius: 3px; display: inline-block; font-size: 14px;">
+              View
+            </a>
+          </td>
           <td class="empty">
             <form action="{% url 'deleteinstructor' inst.id %}" method="post">
               {% csrf_token %}

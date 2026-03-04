@@ -3,11 +3,10 @@
 
 {% url 'home' as home%}
 {% url 'instructorAdd' as instructorAdd %}
-{% url 'roomAdd' as roomAdd %}
+{% url 'labRoomAdd' as labRoomAdd %}
 {% url 'meetingTimeAdd' as meetingTimeAdd %}
 {% url 'courseAdd' as courseAdd %}
-{% url 'departmentAdd' as departmentAdd %}
-{% url 'sectionAdd' as sectionAdd %}
+{% url 'yearEdit' as yearEdit %}
 
 
 <!DOCTYPE html>
@@ -49,11 +48,10 @@
         <ul class="menu-items">
           <li class="{% active request home %}"><a href="{{ home }}">Home</a></li>
           <li class="{% active request instructorAdd %}"><a href="{{ instructorAdd }}">Instructor</a></li>
-          <li class="{% active request roomAdd %}"><a href="{{ roomAdd }}">Room</a></li>
+          <li class="{% active request labRoomAdd %}"><a href="{% url 'labRoomAdd' %}">Lab Room</a></li>
           <li class="{% active request meetingTimeAdd %}"><a href="{{ meetingTimeAdd }}">Meeting time</a></li>
           <li class="{% active request courseAdd %}"><a href="{{ courseAdd }}">Course</a></li>
-          <li class="{% active request departmentAdd %}"><a href="{{ departmentAdd }}">Department</a></li>
-          <li class="{% active request sectionAdd %}"><a href="{{ sectionAdd }}">Section</a></li>
+          <li class="{% active request yearEdit %}"><a href="{{ yearEdit }}">Year</a></li>
           {% if user.is_authenticated %}
           <li><a href="{% url 'logout' %}"><i style="font-size:1.6rem" class="fa">&#xf08b;</i></a></li>
           {% endif %}

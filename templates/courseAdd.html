@@ -2,6 +2,14 @@
 {% block content %}
 {% load static %}
 
+<style>
+.multi-select-hint {
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+    margin-top: 5px;
+}
+</style>
 
 <form method="post">
   {% csrf_token %}
@@ -14,9 +22,65 @@
     </div>
     <div class="tabcontent" id="new">
       {{ form.as_p }}
+      <p class="multi-select-hint" id="multi-select-hint" style="display: none;">
+        💡 Hold down "Control" (Windows) or "Command" (Mac) to select multiple instructors/lab rooms
+      </p>
       <input type="submit" value="Submit" class="submit">
     </div>
   </fieldset>
 </form>
+
+<script>
+// Show/hide fields based on course type
+document.addEventListener('DOMContentLoaded', function() {
+    const courseTypeField = document.getElementById('id_course_type');
+    
+    // Get all instructor field containers
+    const singleInstructorFields = [
+        document.querySelector('[for="id_section_1_instructor"]')?.parentElement,
+        document.querySelector('[for="id_section_2_instructor"]')?.parentElement,
+        document.querySelector('[for="id_section_3_instructor"]')?.parentElement
+    ].filter(el => el !== null && el !== undefined);
+    
+    const labInstructorFields = [
+        document.querySelector('[for="id_section_1_lab_instructors"]')?.parentElement,
+        document.querySelector('[for="id_section_2_lab_instructors"]')?.parentElement,
+        document.querySelector('[for="id_section_3_lab_instructors"]')?.parentElement
+    ].filter(el => el !== null && el !== undefined);
+    
+    const labRoomsField = document.querySelector('[for="id_lab_rooms"]')?.parentElement;
+    const multiSelectHint = document.getElementById('multi-select-hint');
+    
+    function toggleFields() {
+        const isLab = courseTypeField.value === 'LAB';
+        
+        // Show/hide single instructor dropdowns (for THEORY/ELECTIVE)
+        singleInstructorFields.forEach(field => {
+            if (field) field.style.display = isLab ? 'none' : 'block';
+        });
+        
+        // Show/hide multiple instructor dropdowns (for LAB)
+        labInstructorFields.forEach(field => {
+            if (field) field.style.display = isLab ? 'block' : 'none';
+        });
+        
+        // Show/hide lab rooms (for LAB)
+        if (labRoomsField) {
+            labRoomsField.style.display = isLab ? 'block' : 'none';
+        }
+        
+        // Show/hide hint
+        if (multiSelectHint) {
+            multiSelectHint.style.display = isLab ? 'block' : 'none';
+        }
+    }
+    
+    // Initial check
+    toggleFields();
+    
+    // Listen for changes
+    courseTypeField.addEventListener('change', toggleFields);
+});
+</script>
 
 {% endblock %}

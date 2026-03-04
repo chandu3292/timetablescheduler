@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+.year-card {
+    display: inline-block;
+    margin: 15px;
+    padding: 20px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    text-decoration: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+.year-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+.year-card h3 {
+    margin: 0 0 10px 0;
+}
+.year-card .status {
+    font-size: 12px;
+    opacity: 0.9;
+}
+.status-exists {
+    color: #4CAF50;
+    font-weight: bold;
+}
+.status-not-exists {
+    color: #ff9800;
+}
+</style>
+
+<h2 style="text-align: center; margin: 30px 0;">Select Year to View/Generate Timetable</h2>
+
+<div style="text-align: center;">
+{% for year in years %}
+    <a href="{% url 'timetable' %}?year={{ year.id }}" class="year-card">
+        <h3>{{ year.year_name }}</h3>
+        {% if year.generated_timetable %}
+            <div class="status status-exists">✓ Timetable Available</div>
+            <div class="status">Generated: {{ year.generated_timetable.generated_at|date:"M d, Y" }}</div>
+        {% else %}
+            <div class="status status-not-exists">⚠ Not Generated Yet</div>
+        {% endif %}
+    </a>
+{% endfor %}
+</div>
+
+<div style="text-align: center; margin-top: 40px;">
+    <a href="{% url 'home' %}" class="btn">Back to Home</a>
+</div>
+
+{% endblock %}

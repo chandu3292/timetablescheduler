@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+
+<fieldset class="fieldset">
+  <h1>Manage Course-Instructor Assignments</h1>
+  
+  <div style="margin: 20px 0;">
+    <h3>Add New Assignment</h3>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <input type="submit" value="Add Assignment" class="submit">
+    </form>
+  </div>
+
+  <div style="margin-top: 40px;">
+    <h3>Current Assignments</h3>
+    <table class="editTable">
+      <thead>
+        <tr class="table-headers">
+          <th>Year</th>
+          <th>Section</th>
+          <th>Course</th>
+          <th>Instructor</th>
+          <th class="empty"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for assignment in assignments %}
+        <tr>
+          <td>{{ assignment.section.year.year_name }}</td>
+          <td>{{ assignment.section.section_id }}</td>
+          <td>{{ assignment.course.course_number }} - {{ assignment.course.course_name }}</td>
+          <td>{{ assignment.instructor.uid }} {{ assignment.instructor.name }}</td>
+          <td class="empty">
+            <form action="{% url 'deleteAssignment' assignment.id %}" method="post">
+              {% csrf_token %}
+              <input type="submit" value="X" class="cross">
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</fieldset>
+
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+
+<div style="margin-bottom:20px;">
+  <a href="{% url 'lab_timetable' %}" class="btn">View Lab Timetable</a>
+</div>
+
+<fieldset class="fieldset">
+  <h1>Lab Rooms</h1>
+
+  <table class="editTable">
+    <thead>
+      <tr>
+        <th>Lab Name</th>
+        <th>Capacity</th>
+        <th class="empty"></th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for lab in labs %}
+      <tr>
+        <td>{{ lab.lab_name }}</td>
+        <td>{{ lab.seating_capacity }}</td>
+        <td class="empty">
+          <form action="{% url 'labRoomDelete' lab.id %}" method="post">
+            {% csrf_token %}
+            <input type="submit" value="X" class="cross">
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</fieldset>
+
+{% endblock %}
