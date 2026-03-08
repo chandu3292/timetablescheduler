@@ -1,83 +1,73 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.contrib.auth.models import AbstractUser
-from django.db.models.signals import post_save, post_delete
-
-
-# TIME_SLOTS = (
-#     ('8:45 - 9:45'  , '8:45 - 9:45'),
-#     ('10:00 - 11:00', '10:00 - 11:00'),
-#     ('11:00 - 12:00', '11:00 - 12:00'),
-#     ('1:00 - 2:00'  , '1:00 - 2:00'),
-#     ('2:15 - 3:15'  , '2:15 - 3:15'),
-# )
 
 TIME_SLOTS = (
-    ('9:30 - 10:30', '9:30 - 10:30'),
-    ('10:30 - 11:30', '10:30 - 11:30'),
-    ('11:30 - 12:30', '11:30 - 12:30'),
-    ('12:30 - 1:30', '12:30 - 1:30'),
-    ('2:30 - 3:30', '2:30 - 3:30'),
-    ('3:30 - 4:30', '3:30 - 4:30'),
-    ('4:30 - 5:30', '4:30 - 5:30'),
+    ('8:45 - 9:45',   '8:45 - 9:45'),
+    ('9:45 - 10:35',  '9:45 - 10:35'),
+    ('10:35 - 11:25', '10:35 - 11:25'),
+    ('11:25 - 12:15', '11:25 - 12:15'),
+    # --- Lunch break 12:15 - 1:05 ---
+    ('1:05 - 1:55',   '1:05 - 1:55'),
+    ('1:55 - 2:45',   '1:55 - 2:45'),
+    ('2:45 - 3:35',   '2:45 - 3:35'),
 )
 
 DAYS_OF_WEEK = (
-    ('Monday', 'Monday'),
-    ('Tuesday', 'Tuesday'),
+    ('Monday',    'Monday'),
+    ('Tuesday',   'Tuesday'),
     ('Wednesday', 'Wednesday'),
-    ('Thursday', 'Thursday'),
-    ('Friday', 'Friday'),
-)
-    # ('Saturday', 'Saturday'),
-
-ACADEMIC_YEARS = (
-    ('1st Year', '1st Year'),
-    ('2nd Year', '2nd Year'),
-    ('3rd Year', '3rd Year'),
-    ('4th Year', '4th Year'),
+    ('Thursday',  'Thursday'),
+    ('Friday',    'Friday'),
+    ('Saturday',  'Saturday'),
 )
 
 COURSE_TYPES = (
-    ('Lecture', 'Lecture'),
-    ('Lab', 'Lab'),
+    ('THEORY',   'Theory'),
+    ('LAB',      'Lab'),
+    ('ELECTIVE', 'Elective'),
+)
+
+SPECIAL_PERIOD_TYPES = (
+    ('Counseling',     'Counseling'),
+    ('Training',       'Training'),
+    ('Sports/Library', 'Sports/Library'),
 )
 
 
-class Room(models.Model):
-    r_number = models.CharField(max_length=6)
-    seating_capacity = models.IntegerField(default=0)
-
-    def __str__(self):
-        return self.r_number
-
-
 class Instructor(models.Model):
-    uid = models.CharField(max_length=6)
-    name = models.CharField(max_length=25)
+    uid  = models.CharField(max_length=10)
+    name = models.CharField(max_length=50)
 
     def __str__(self):
         return f'{self.uid} {self.name}'
 
 
-class MeetingTime(models.Model):
-    pid = models.CharField(max_length=4, primary_key=True)
-    time = models.CharField(max_length=50,
-                            choices=TIME_SLOTS,
-                            default='11:30 - 12:30')
-    day = models.CharField(max_length=15, choices=DAYS_OF_WEEK)
+class LabRoom(models.Model):
+    lab_name         = models.CharField(max_length=50)
+    seating_capacity = models.IntegerField(default=0)
 
     def __str__(self):
-        return f'{self.pid} {self.day} {self.time}'
+        return self.lab_name
 
 
 class Course(models.Model):
-    course_number = models.CharField(max_length=5, primary_key=True)
-    course_name = models.CharField(max_length=40)
-    max_numb_students = models.CharField(max_length=65)
-    instructors = models.ManyToManyField(Instructor)
-    course_type = models.CharField(max_length=10, choices=COURSE_TYPES, default='Lecture')
-    lab_length = models.IntegerField(default=0, help_text="Length in hours (e.g., 2 or 3) if it's a lab")
+    course_number        = models.CharField(max_length=15, primary_key=True)
+    course_name          = models.CharField(max_length=60)
+    max_numb_students    = models.CharField(max_length=65, blank=True, default='')
+    hours_per_week       = models.IntegerField(default=0,
+                               validators=[MinValueValidator(0)],
+                               help_text='Contact hours per week')
+    priority             = models.IntegerField(default=3,
+                               help_text='Lower = scheduled earlier')
+    max_continuous_hours = models.IntegerField(default=2,
+                               validators=[MinValueValidator(1)],
+                               help_text='Max consecutive hours per day')
+    course_type          = models.CharField(max_length=10, choices=COURSE_TYPES, default='THEORY')
+    split_into_batches   = models.BooleanField(default=False,
+                               help_text='Divide section into B1/B2 batches for this lab')
+    instructors          = models.ManyToManyField(Instructor, blank=True)
+    lab_rooms            = models.ManyToManyField(LabRoom, blank=True,
+                               help_text='Allowed lab rooms for this course')
 
     def __str__(self):
         return f'{self.course_number} {self.course_name}'
@@ -85,85 +75,106 @@ class Course(models.Model):
 
 class Department(models.Model):
     dept_name = models.CharField(max_length=50)
-    courses = models.ManyToManyField(Course)
-
-    @property
-    def get_courses(self):
-        return self.courses
 
     def __str__(self):
         return self.dept_name
 
 
-class Section(models.Model):
-    section_id = models.CharField(max_length=25, primary_key=True)
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
-    num_class_in_week = models.IntegerField(default=0)
-    year = models.CharField(max_length=10, choices=ACADEMIC_YEARS, default='1st Year')
-    course = models.ForeignKey(Course,
-                               on_delete=models.CASCADE,
-                               blank=True,
-                               null=True)
-    meeting_time = models.ForeignKey(MeetingTime,
-                                     on_delete=models.CASCADE,
-                                     blank=True,
-                                     null=True)
-    room = models.ForeignKey(Room,
-                             on_delete=models.CASCADE,
-                             blank=True,
-                             null=True)
-    instructor = models.ForeignKey(Instructor,
-                                   on_delete=models.CASCADE,
-                                   blank=True,
-                                   null=True)
-
-    def set_room(self, room):
-        section = Section.objects.get(pk=self.section_id)
-        section.room = room
-        section.save()
-
-    def set_meetingTime(self, meetingTime):
-        section = Section.objects.get(pk=self.section_id)
-        section.meeting_time = meetingTime
-        section.save()
-
-    def set_instructor(self, instructor):
-        section = Section.objects.get(pk=self.section_id)
-        section.instructor = instructor
-        section.save()
-
-
-class SectionCourseAssignment(models.Model):
-    section = models.ForeignKey(Section, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+class Year(models.Model):
+    year_name = models.CharField(max_length=20)
+    courses   = models.ManyToManyField(Course, blank=True)
 
     def __str__(self):
-        return f"{self.section.section_id} - {self.course.course_name} - {self.instructor.name}"
+        return self.year_name
+
+
+class MeetingTime(models.Model):
+    pid  = models.CharField(max_length=10, primary_key=True)
+    time = models.CharField(max_length=50, choices=TIME_SLOTS, default='8:45 - 9:45')
+    day  = models.CharField(max_length=15, choices=DAYS_OF_WEEK)
+    year = models.ForeignKey(Year, on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.pid} {self.day} {self.time}'
+
+
+class CourseInstructorAssignment(models.Model):
+    """Instructor(s) assigned to a course for a specific year+section."""
+    course         = models.ForeignKey(Course, on_delete=models.CASCADE)
+    year           = models.ForeignKey(Year, on_delete=models.CASCADE)
+    section_number = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(3)]
+    )
+    instructors    = models.ManyToManyField(Instructor, blank=True)
 
     class Meta:
-        unique_together = ('section', 'course')
+        unique_together = ['year', 'section_number', 'course']
+
+    def __str__(self):
+        return f'{self.year} S{self.section_number} {self.course}'
 
 
-'''
-class Data(models.Manager):
-    def __init__(self):
-        self._rooms = Room.objects.all()
-        self._meetingTimes = MeetingTime.objects.all()
-        self._instructors = Instructor.objects.all()
-        self._courses = Course.objects.all()
-        self._depts = Department.objects.all()
+class SpecialPeriod(models.Model):
+    """A special period (Counseling / Training / Sports-Library) for a year."""
+    period_type      = models.CharField(max_length=20, choices=SPECIAL_PERIOD_TYPES)
+    hours_per_week   = models.IntegerField(default=1, validators=[MinValueValidator(1)])
+    continuous_hours = models.IntegerField(default=1, validators=[MinValueValidator(1)])
+    instructor       = models.ForeignKey(Instructor, on_delete=models.SET_NULL,
+                           null=True, blank=True)
+    year             = models.ForeignKey(Year, on_delete=models.CASCADE)
 
-    def get_rooms(self): return self._rooms
+    class Meta:
+        unique_together = ['period_type', 'year']
 
-    def get_instructors(self): return self._instructors
+    def __str__(self):
+        return f'{self.year} {self.period_type}'
 
-    def get_courses(self): return self._courses
 
-    def get_depts(self): return self._depts
+class GeneratedTimetable(models.Model):
+    year            = models.OneToOneField(Year, on_delete=models.CASCADE)
+    generated_at    = models.DateTimeField(auto_now=True)
+    fitness_score   = models.FloatField(default=0.0)
+    generation_count = models.IntegerField(default=0)
 
-    def get_meetingTimes(self): return self._meetingTimes
+    def __str__(self):
+        return f'Timetable for {self.year} (fitness={self.fitness_score:.4f})'
 
-    def get_numberOfClasses(self): return self._numberOfClasses
 
-'''
+class TimetableEntry(models.Model):
+    """One scheduled hour in a generated timetable."""
+    timetable      = models.ForeignKey(GeneratedTimetable, on_delete=models.CASCADE,
+                         related_name='entries')
+    year           = models.ForeignKey(Year, on_delete=models.CASCADE)
+    section_number = models.IntegerField(default=1)
+    course         = models.ForeignKey(Course, on_delete=models.CASCADE)
+    instructor     = models.ForeignKey(Instructor, on_delete=models.SET_NULL,
+                         null=True, blank=True)
+    lab_room       = models.ForeignKey(LabRoom, on_delete=models.SET_NULL,
+                         null=True, blank=True)
+    meeting_time   = models.ForeignKey(MeetingTime, on_delete=models.CASCADE)
+    batch          = models.CharField(max_length=10, default='FULL',
+                         help_text="FULL | B1 | B2 ...")
+
+    def __str__(self):
+        return (f'{self.year} S{self.section_number} {self.course} '
+                f'{self.meeting_time.day} {self.meeting_time.time}')
+
+
+class LabBatchAssignment(models.Model):
+    """Defines how a split-into-batches lab is scheduled per section."""
+    year           = models.ForeignKey(Year, on_delete=models.CASCADE)
+    section_number = models.IntegerField(default=1)
+    batch          = models.CharField(max_length=10)          # B1, B2, …
+    session_number = models.IntegerField(default=1)
+    course         = models.ForeignKey(Course, on_delete=models.CASCADE,
+                         related_name='batch_assignments')
+    paired_course  = models.ForeignKey(Course, on_delete=models.SET_NULL,
+                         null=True, blank=True,
+                         related_name='paired_batch_assignments')
+    lab_room       = models.ForeignKey(LabRoom, on_delete=models.CASCADE)
+    instructors    = models.ManyToManyField(Instructor, blank=True)
+
+    def __str__(self):
+        return (f'{self.year} S{self.section_number} {self.batch} '
+                f'{self.course}')

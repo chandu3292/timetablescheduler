@@ -1,39 +1,22 @@
 from django.forms import ModelForm
-from .models import *
-
-class SectionCourseAssignmentForm(ModelForm):
-    class Meta:
-        model = SectionCourseAssignment
-        fields = ['section', 'course', 'instructor']
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from .models import (
+    Instructor, LabRoom, Course, Department, Year, MeetingTime,
+    CourseInstructorAssignment, SpecialPeriod, LabBatchAssignment,
+)
 
 
 class UserLoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
-        super(UserLoginForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-    username = forms.CharField(widget=forms.TextInput(
-        attrs={
-            'class': 'form-control',
-            'type': 'text',
-            'placeholder': 'UserName',
-            'id': 'id_username'
-        }))
-    password = forms.CharField(widget=forms.PasswordInput(
-        attrs={
-            'class': 'form-control',
-            'type': 'password',
-            'placeholder': 'Password',
-            'id': 'id_password',
-        }))
-
-
-class RoomForm(ModelForm):
-    class Meta:
-        model = Room
-        labels = {'r_number': 'Room Number'}
-        fields = ['r_number', 'seating_capacity']
+    username = forms.CharField(widget=forms.TextInput(attrs={
+        'class': 'form-control', 'placeholder': 'UserName', 'id': 'id_username'
+    }))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={
+        'class': 'form-control', 'placeholder': 'Password', 'id': 'id_password'
+    }))
 
 
 class InstructorForm(ModelForm):
@@ -43,15 +26,11 @@ class InstructorForm(ModelForm):
         fields = ['uid', 'name']
 
 
-class MeetingTimeForm(ModelForm):
+class LabRoomForm(ModelForm):
     class Meta:
-        model = MeetingTime
-        fields = ['pid', 'time', 'day']
-        widgets = {
-            'pid': forms.TextInput(),
-            'time': forms.Select(),
-            'day': forms.Select(),
-        }
+        model = LabRoom
+        labels = {'lab_name': 'Lab Room Name'}
+        fields = ['lab_name', 'seating_capacity']
 
 
 class CourseForm(ModelForm):
@@ -59,19 +38,52 @@ class CourseForm(ModelForm):
         model = Course
         labels = {'max_numb_students': 'Maximum students'}
         fields = [
-            'course_number', 'course_name', 'max_numb_students', 'instructors'
+            'course_number', 'course_name', 'max_numb_students',
+            'hours_per_week', 'priority', 'max_continuous_hours',
+            'course_type', 'split_into_batches',
+            'instructors', 'lab_rooms',
         ]
 
 
 class DepartmentForm(ModelForm):
     class Meta:
         model = Department
-        labels = {'dept_name': 'Department name'}
-        fields = ['dept_name', 'courses']
+        fields = ['dept_name']
 
 
-class SectionForm(ModelForm):
+class YearForm(ModelForm):
     class Meta:
-        model = Section
-        labels = {'num_class_in_week': 'Total classes in a week'}
-        fields = ['section_id', 'department', 'num_class_in_week', 'year']
+        model = Year
+        fields = ['year_name', 'courses']
+
+
+class MeetingTimeForm(ModelForm):
+    class Meta:
+        model = MeetingTime
+        fields = ['pid', 'time', 'day', 'year']
+        widgets = {
+            'pid':  forms.TextInput(),
+            'time': forms.Select(),
+            'day':  forms.Select(),
+        }
+
+
+class CourseInstructorAssignmentForm(ModelForm):
+    class Meta:
+        model = CourseInstructorAssignment
+        fields = ['course', 'year', 'section_number', 'instructors']
+
+
+class SpecialPeriodForm(ModelForm):
+    class Meta:
+        model = SpecialPeriod
+        fields = ['period_type', 'hours_per_week', 'continuous_hours', 'instructor', 'year']
+
+
+class LabBatchAssignmentForm(ModelForm):
+    class Meta:
+        model = LabBatchAssignment
+        fields = [
+            'year', 'section_number', 'batch', 'session_number',
+            'course', 'paired_course', 'lab_room', 'instructors',
+        ]

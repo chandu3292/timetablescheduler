@@ -19,6 +19,7 @@
           <th>UID</th>
           <th>Name</th>
           <th class="empty"></th>
+          <th class="empty"></th>
         </tr>
       </thead>
 
@@ -27,6 +28,9 @@
         <tr>
           <td>{{inst.uid}}</td>
           <td>{{inst.name}}</td>
+          <td class="empty">
+            <a href="{% url 'updateinstructor' inst.id %}"><button class="submit" type="button">Edit</button></a>
+          </td>
           <td class="empty">
             <form action="{% url 'deleteinstructor' inst.id %}" method="post">
               {% csrf_token %}

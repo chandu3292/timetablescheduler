@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+
+<form method="post">
+  {% csrf_token %}
+  <fieldset>
+    <div class="tablink">
+      <a href="{% url 'instructorEdit' %}">
+        <h1 id="defaultOpen">Edit Instructor</h1>
+      </a>
+    </div>
+    <div class="tabcontent" id="new" style="display:block;">
+      <h3>Editing: {{ inst.uid }}</h3>
+      {{ form.as_p }}
+      <input type="submit" value="Save" class="submit">
+      <a href="{% url 'instructorEdit' %}"><button type="button" class="submit">Cancel</button></a>
+    </div>
+  </fieldset>
+</form>
+
+{% endblock %}

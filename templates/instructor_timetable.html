@@ -1,41 +1,289 @@
 {% extends 'base.html' %}
 {% block content %}
 {% load static %}
-{% load index %}
 
-<div style="margin-bottom:20px;">
-  <a href="{% url 'instructor_timetable' %}" class="btn">Instructor View</a>
-</div>
+<style>
+/* make formpart not interfere */
+.formpart { flex-direction:column !important; align-items:stretch !important; padding:0 !important; }
 
-<div>
-  {% for instructor in instructors %}
-  <h2 class="secHead">{{ instructor.name }} ({{ instructor.uid }})</h2>
+:root { --teal:#1abc9c; --navy:#1a2534; --border:#e0e5ec; }
 
-  <table class="timetable">
-    <thead>
-      <tr>
-        <th>Day</th>
-        {% for time in timeSlots %}
-        <th>{{ time.0 }}</th>
-        {% endfor %}
-      </tr>
-    </thead>
+/* ── full split layout ── */
+.it-wrap {
+  display:flex;
+  height:calc(100vh - 90px);   /* full viewport minus navbar */
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 4px 18px rgba(0,0,0,.08);
+}
 
-    <tbody>
-      {% for week in weekDays %}
-      <tr>
-        <th>{{ week.0 }}</th>
-        {% for time in timeSlots %}
-        <td>
-          {% sub_instructor schedule instructor week.0 time.0 %}
-        </td>
-        {% endfor %}
-      </tr>
+/* ── LEFT SIDEBAR ── */
+.it-sidebar {
+  width:220px;
+  min-width:220px;
+  background:var(--navy);
+  display:flex;
+  flex-direction:column;
+  border-right:2px solid #0d1520;
+}
+.it-sidebar-top {
+  padding:14px 14px 10px;
+  border-bottom:1px solid #2c3e50;
+  flex-shrink:0;
+}
+.it-sidebar-top h4 {
+  color:#fff; font-size:.85rem; font-weight:700;
+  margin:0 0 10px; letter-spacing:.3px;
+}
+.it-search {
+  position:relative;
+}
+.it-search input {
+  width:100%; box-sizing:border-box;
+  padding:7px 10px 7px 28px;
+  background:#0d1520; border:1px solid #3d5166;
+  border-radius:6px; color:#ccc; font-size:.78rem; outline:none;
+  transition:border-color .2s;
+}
+.it-search input::placeholder { color:#5a7080; }
+.it-search input:focus { border-color:var(--teal); }
+.it-search i {
+  position:absolute; left:9px; top:50%;
+  transform:translateY(-50%); color:#5a7080; font-size:.75rem;
+}
+
+/* scrollable instructor list */
+.it-list {
+  flex:1; overflow-y:auto; padding:6px 0;
+}
+.it-list::-webkit-scrollbar { width:3px; }
+.it-list::-webkit-scrollbar-thumb { background:#3d5166; border-radius:4px; }
+
+.it-item {
+  padding:9px 14px; cursor:pointer;
+  border-left:3px solid transparent;
+  transition:all .15s;
+}
+.it-item:hover  { background:#1e3145; }
+.it-item.active { background:#1e3145; border-left-color:var(--teal); }
+.it-item .iname { color:#dde; font-size:.8rem; font-weight:600; line-height:1.3; display:block; }
+.it-item .imeta { color:#5a7080; font-size:.68rem; display:block; margin-top:1px; }
+.it-item.hidden { display:none; }
+
+.it-no-res { color:#5a7080; font-size:.78rem; text-align:center; padding:16px; display:none; }
+
+/* back button pinned at bottom */
+.it-sidebar-foot {
+  padding:10px 12px;
+  border-top:1px solid #2c3e50;
+  flex-shrink:0;
+}
+.btn-back {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  background:#2c3e50; color:#aaa; border-radius:7px;
+  padding:8px; font-size:.78rem; font-weight:600;
+  text-decoration:none; transition:all .2s;
+}
+.btn-back:hover { background:var(--teal); color:#fff; text-decoration:none; }
+
+/* ── RIGHT PANEL ── */
+.it-main {
+  flex:1; display:flex; flex-direction:column; overflow:hidden; background:#f7f9fc;
+}
+
+/* top bar of right panel */
+.it-main-head {
+  background:#fff; border-bottom:1px solid var(--border);
+  padding:12px 20px; display:flex; align-items:center;
+  gap:12px; flex-shrink:0;
+}
+.inst-avatar {
+  width:38px; height:38px; background:var(--teal);
+  border-radius:50%; display:flex; align-items:center;
+  justify-content:center; font-size:.95rem; font-weight:800;
+  color:#fff; flex-shrink:0;
+}
+.main-head-info .iname { font-size:1rem; font-weight:700; color:var(--navy); }
+.main-head-info .iuid  { font-size:.75rem; color:#888; }
+.islots {
+  margin-left:auto;
+  background:#eafaf5; color:var(--teal);
+  border:1px solid #b2dfdb;
+  border-radius:20px; padding:3px 13px;
+  font-size:.75rem; font-weight:600;
+}
+
+/* timetable scroll area */
+.it-table-area { flex:1; overflow:auto; padding:16px 18px 20px; }
+
+table.tt {
+  width:100%; border-collapse:collapse;
+  min-width:640px; background:#fff;
+  border-radius:10px; overflow:hidden;
+  box-shadow:0 1px 6px rgba(0,0,0,.06);
+}
+table.tt thead th {
+  background:#16213e; color:#fff;
+  padding:9px 8px; text-align:center;
+  font-size:.75rem; font-weight:600;
+  white-space:nowrap; border:1px solid #0d1520;
+}
+table.tt thead th:first-child { width:86px; background:#0d1520; }
+table.tt tbody th {
+  background:#f4f6f9; color:#2c3e50;
+  font-size:.77rem; font-weight:700;
+  text-align:center; padding:8px 6px;
+  border:1px solid #dde2ea; white-space:nowrap;
+}
+table.tt tbody td {
+  border:1px solid #e8eaee;
+  padding:6px 8px; vertical-align:top;
+  min-width:95px; background:#fff;
+}
+table.tt tbody tr:hover td { background:#f7fbff; }
+
+.tt-cell { font-size:.74rem; line-height:1.38; }
+.cname  { font-weight:700; color:var(--navy); display:block; margin-bottom:2px; }
+.cbadge { display:inline-block; font-size:.6rem; font-weight:700; border-radius:3px; padding:1px 5px; margin-bottom:2px; }
+.b-lab      { background:#d6eaf8; color:#1a5276; }
+.b-elective { background:#d5f5e3; color:#1e8449; }
+.b-theory   { background:#fdebd0; color:#784212; }
+.cmeta { color:#888; font-size:.66rem; display:block; }
+.croom { color:#bbb; font-size:.62rem; font-style:italic; display:block; margin-top:1px; }
+
+.no-cls { color:#ccc; font-size:.85rem; padding:30px 20px; text-align:center; }
+
+/* panels */
+.inst-panel { display:none; flex-direction:column; height:100%; }
+.inst-panel.active { display:flex; }
+</style>
+
+{% if instructors_data %}
+<div class="it-wrap">
+
+  <!-- ── SIDEBAR ── -->
+  <div class="it-sidebar">
+    <div class="it-sidebar-top">
+      <h4><i class="fa fa-users"></i> &nbsp;Instructors</h4>
+      <div class="it-search">
+        <i class="fa fa-search"></i>
+        <input type="text" placeholder="Search…" oninput="filterInst(this.value)">
+      </div>
+    </div>
+
+    <div class="it-list" id="instList">
+      {% for inst_data in instructors_data %}
+      <div class="it-item {% if forloop.first %}active{% endif %}"
+           id="tab_{{ forloop.counter }}"
+           data-name="{{ inst_data.instructor.name|lower }}"
+           onclick="switchInst({{ forloop.counter }}, this)">
+        <span class="iname">{{ inst_data.instructor.name }}</span>
+        <span class="imeta">{{ inst_data.instructor.uid }} &nbsp;·&nbsp; {{ inst_data.entries|length }} slots</span>
+      </div>
       {% endfor %}
-    </tbody>
-  </table>
+      <div class="it-no-res" id="noRes">No results</div>
+    </div>
 
-  {% endfor %}
+    <div class="it-sidebar-foot">
+      <a href="{% url 'timetable' %}" class="btn-back">
+        <i class="fa fa-arrow-left"></i> Section View
+      </a>
+    </div>
+  </div>
+
+  <!-- ── RIGHT PANELS ── -->
+  <div class="it-main" id="mainArea">
+    {% for inst_data in instructors_data %}
+    <div class="inst-panel {% if forloop.first %}active{% endif %}" id="panel_{{ forloop.counter }}">
+
+      <!-- header -->
+      <div class="it-main-head">
+        <div class="inst-avatar">{{ inst_data.instructor.name|slice:":1"|upper }}</div>
+        <div class="main-head-info">
+          <div class="iname">{{ inst_data.instructor.name }}</div>
+          <div class="iuid">{{ inst_data.instructor.uid }}</div>
+        </div>
+        <span class="islots">{{ inst_data.entries|length }} slots</span>
+      </div>
+
+      <!-- timetable -->
+      {% if inst_data.entries %}
+      <div class="it-table-area">
+        <table class="tt">
+          <thead>
+            <tr>
+              <th>Day</th>
+              {% for slot in timeSlots %}<th>{{ slot.0 }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for day in weekDays %}
+            <tr>
+              <th>{{ day.0 }}</th>
+              {% for slot in timeSlots %}
+              <td>
+                {% for entry in inst_data.entries %}
+                {% if entry.day == day.0 and entry.time == slot.0 %}
+                <div class="tt-cell">
+                  <span class="cname">{{ entry.course_name }}</span>
+                  {% if entry.course_type == 'LAB' %}<span class="cbadge b-lab">Lab</span>
+                  {% elif entry.course_type == 'ELECTIVE' %}<span class="cbadge b-elective">Elective</span>
+                  {% else %}<span class="cbadge b-theory">Theory</span>{% endif %}
+                  <span class="cmeta">{{ entry.year }} · Sec {{ entry.section }}</span>
+                  {% if entry.lab_room %}<span class="croom"><i class="fa fa-map-marker"></i> {{ entry.lab_room }}</span>{% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="no-cls"><i class="fa fa-calendar-o"></i><br>No classes assigned.</div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  </div>
+
 </div>
+
+{% else %}
+<div style="text-align:center;padding:60px;color:#bbb;">
+  No timetable generated yet. <a href="{% url 'timetable' %}">Generate one first.</a>
+</div>
+{% endif %}
+
+<script>
+function switchInst(n, item) {
+  document.querySelectorAll('.inst-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.it-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('panel_' + n).classList.add('active');
+  item.classList.add('active');
+  item.scrollIntoView({ block:'nearest' });
+}
+
+function filterInst(val) {
+  const q = val.toLowerCase().trim();
+  let found = 0;
+  document.querySelectorAll('.it-item').forEach(item => {
+    const show = !q || item.dataset.name.includes(q);
+    item.classList.toggle('hidden', !show);
+    if (show) found++;
+  });
+  document.getElementById('noRes').style.display = found ? 'none' : 'block';
+  if (q) {
+    const first = document.querySelector('.it-item:not(.hidden)');
+    if (first) {
+      const n = first.id.replace('tab_', '');
+      switchInst(n, first);
+    }
+  }
+}
+</script>
 
 {% endblock %}
