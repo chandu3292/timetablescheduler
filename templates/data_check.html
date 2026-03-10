@@ -106,7 +106,7 @@
     </div>
 
     <div class="data-section">
-        <h3>⏰ Meeting Times <span class="count-badge">{{ year_meeting_times.count }}</span></h3>
+        <h3>⏰ Period Timings <span class="count-badge">{{ year_meeting_times.count }}</span></h3>
         {% if year_meeting_times %}
             {% for mt in year_meeting_times %}
             <div class="time-item">
@@ -114,7 +114,7 @@
             </div>
             {% endfor %}
         {% else %}
-            <p>❌ No meeting times for this year. <a href="{% url 'meetingTimeAdd' %}">Add Meeting Times</a> and select "{{ year.year_name }}"</p>
+            <p>❌ No period timings for this year. <a href="{% url 'meetingTimeAdd' %}">Add Period Timings</a> and select "{{ year.year_name }}"</p>
         {% endif %}
     </div>
 

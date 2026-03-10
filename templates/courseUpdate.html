@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+.update-container {
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.update-container h1 {
+    color: #667eea;
+    margin-bottom: 30px;
+    text-align: center;
+    font-size: 32px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+    font-size: 16px;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn {
+    flex: 1;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    line-height: 1.5;
+}
+
+.btn-save {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-cancel {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #5a6268;
+}
+
+.multi-select-hint {
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+    margin-top: 5px;
+    text-align: center;
+}
+</style>
+
+<div class="update-container">
+    <h1>Edit Course</h1>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+                <small style="color: #666; font-size: 14px;">{{ field.help_text }}</small>
+            {% endif %}
+        </div>
+        {% endfor %}
+        
+        <p class="multi-select-hint" id="multi-select-hint" style="display: none;">
+            💡 Hold down "Control" (Windows) or "Command" (Mac) to select multiple instructors/lab rooms
+        </p>
+        
+        <div class="btn-group">
+            <button type="submit" class="btn btn-save">💾 Save Changes</button>
+            <a href="{% url 'courseEdit' %}" class="btn btn-cancel">✕ Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Show/hide fields based on course type
+document.addEventListener('DOMContentLoaded', function() {
+    const courseTypeField = document.getElementById('id_course_type');
+    
+    // Get all instructor field containers
+    const singleInstructorFields = [
+        document.querySelector('[for="id_section_1_instructor"]')?.parentElement,
+        document.querySelector('[for="id_section_2_instructor"]')?.parentElement,
+        document.querySelector('[for="id_section_3_instructor"]')?.parentElement
+    ].filter(el => el !== null && el !== undefined);
+    
+    const labInstructorFields = [
+        document.querySelector('[for="id_section_1_lab_instructors"]')?.parentElement,
+        document.querySelector('[for="id_section_2_lab_instructors"]')?.parentElement,
+        document.querySelector('[for="id_section_3_lab_instructors"]')?.parentElement
+    ].filter(el => el !== null && el !== undefined);
+    
+    const labRoomsField = document.querySelector('[for="id_lab_rooms"]')?.parentElement;
+    const multiSelectHint = document.getElementById('multi-select-hint');
+    
+    function toggleFields() {
+        const isLab = courseTypeField.value === 'LAB';
+        
+        // Show/hide single instructor dropdowns (for THEORY/ELECTIVE)
+        singleInstructorFields.forEach(field => {
+            if (field) field.style.display = isLab ? 'none' : 'block';
+        });
+        
+        // Show/hide multiple instructor dropdowns (for LAB)
+        labInstructorFields.forEach(field => {
+            if (field) field.style.display = isLab ? 'block' : 'none';
+        });
+        
+        // Show/hide lab rooms (for LAB)
+        if (labRoomsField) {
+            labRoomsField.style.display = isLab ? 'block' : 'none';
+        }
+        
+        // Show/hide hint
+        if (multiSelectHint) {
+            multiSelectHint.style.display = isLab ? 'block' : 'none';
+        }
+    }
+    
+    // Initial check
+    toggleFields();
+    
+    // Listen for changes
+    courseTypeField.addEventListener('change', toggleFields);
+});
+</script>
+
+{% endblock %}

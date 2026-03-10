@@ -3,6 +3,38 @@
 
 {% block content %}
 
+<style>
+#id_courses {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    background: #f8f9fa;
+}
+
+#id_courses ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#id_courses li {
+    margin-bottom: 10px;
+}
+
+#id_courses label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+#id_courses input[type="checkbox"] {
+    margin-right: 10px;
+    cursor: pointer;
+}
+</style>
+
 <form method="post">
   {% csrf_token %}
   <fieldset>

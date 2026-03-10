@@ -37,9 +37,8 @@
         <td>
           {% for class in schedule %}
             {% if class.meeting_time.day == week.0 and class.meeting_time.time == time.0 %}
-              <div style="background: #009688; color: white; padding: 8px; margin: 2px; border-radius: 4px; font-size: 12px;">
-                <strong>{{ class.course.course_number }}</strong><br>
-                {{ class.course.course_name }}<br>
+              <div style="background: #009688; color: white; padding: 6px; margin: 2px; border-radius: 4px; font-size: 11px;">
+                <strong>{{ class.course.course_name }}</strong><br>
                 <small>{{ class.year.year_name }} - Section {{ class.section_number }}</small><br>
                 <small>{{ class.room }}</small>
               </div>

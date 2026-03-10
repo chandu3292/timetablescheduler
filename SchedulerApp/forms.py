@@ -125,8 +125,14 @@ class CourseForm(ModelForm):
 class YearForm(ModelForm):
     class Meta:
         model = Year
-        fields = ['year_name']
-        labels = {'year_name': 'Year'}
+        fields = ['year_name', 'courses']
+        labels = {
+            'year_name': 'Year',
+            'courses': 'Courses for this Year'
+        }
+        widgets = {
+            'courses': forms.CheckboxSelectMultiple(),
+        }
 
 
 
@@ -135,3 +141,23 @@ class DepartmentForm(ModelForm):
         model = Department
         labels = {'dept_name': 'Department name'}
         fields = ['dept_name', 'courses']
+
+
+class SpecialPeriodForm(ModelForm):
+    class Meta:
+        model = SpecialPeriod
+        fields = ['period_type', 'year', 'hours_per_week', 'continuous_hours', 'instructor']
+        labels = {
+            'period_type': 'Period Type',
+            'year': 'Year (Applies to all 3 sections)',
+            'hours_per_week': 'Hours Per Week',
+            'continuous_hours': 'Continuous Hours',
+            'instructor': 'Instructor (Optional)'
+        }
+        widgets = {
+            'period_type': forms.Select(),
+            'year': forms.Select(),
+            'hours_per_week': forms.NumberInput(attrs={'min': 1, 'max': 5}),
+            'continuous_hours': forms.NumberInput(attrs={'min': 1, 'max': 5}),
+            'instructor': forms.Select()
+        }

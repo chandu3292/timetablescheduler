@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+
+<form method="post">
+  {% csrf_token %}
+  <fieldset>
+    <div class="tablink">
+      <h1 onclick="openPage('new')" id="defaultOpen">Add Special Period</h1>
+      <a href="{% url 'specialPeriodEdit' %}">
+        <h1 onclick="openPage('edit')" id="link_to_edit">Edit Special Periods</h1>
+      </a>
+    </div>
+    <div class="tabcontent" id="new">
+      <div style="background: #f0f8ff; padding: 15px; margin-bottom: 20px; border-left: 4px solid #2196F3; border-radius: 4px;">
+        <h4 style="margin-top: 0; color: #1976D2;">ℹ️ Special Period Configuration Guide</h4>
+        <p style="margin: 10px 0;"><strong>Note:</strong> Special periods automatically apply to <strong>all 3 sections</strong> in the selected year.</p>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+          <li><strong>Counseling:</strong> 1 hour per week, 1 continuous hour</li>
+          <li><strong>Training:</strong> Typically 2 hours per week, 2 continuous hours (for 1st Year)</li>
+          <li><strong>Sports/Library:</strong> 1 hour per week, 1 continuous hour</li>
+        </ul>
+        <p style="margin-bottom: 0;"><em>Instructor is optional - leave blank if not assigned to a specific person.</em></p>
+      </div>
+      {{ form.as_p }}
+      <input type="submit" value="Submit" class="submit">
+    </div>
+  </fieldset>
+</form>
+
+{% endblock %}

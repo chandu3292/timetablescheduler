@@ -21,9 +21,10 @@
             Add your ANITS class details and generate Time Table.</p>
         </div>
         <div class="crdbtn">
-          <a href="{% url 'data_check' %}" class="btn" style="background: #2196f3;">Check Data</a>
-          <a href="{% url 'timetable' %}" id='genButton' class="btn" onclick='document.getElementById("loaderClass").style.display="inline-block"'>Generate Timetable</a>
           {% if user.is_authenticated %}
+          <a href="{% url 'data_check' %}" class="btn" style="background: #2196f3;">Check Data</a>
+          <a href="{% url 'view_timetable' %}" class="btn" style="background: #28a745;">View Timetable</a>
+          <a href="{% url 'timetable' %}" id='genButton' class="btn" onclick='document.getElementById("loaderClass").style.display="inline-block"'>Generate Timetable</a>
           <div id="loaderClass" class="loaderClass">
             <span class="loaderClassValue">0</span>
             <svg class="loader" width="40" height="40">
@@ -32,9 +33,8 @@
             </svg>
             <a href="{% url 'apiterminateGens' %}" class="btn terminateGens">Stop</a>
           </div>
-          {% endif %}
-          {% if not user.is_authenticated %}
-          <a href="{% url 'login' %}" class="btn">Login</a>
+          {% else %}
+          <a href="{% url 'login' %}" class="btn" style="background: #00c0ef; font-size: 18px; padding: 15px 40px;">Login to Access Scheduler</a>
           {% endif %}
         </div>
       </div>

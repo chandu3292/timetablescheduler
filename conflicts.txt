@@ -1,0 +1,20 @@
+﻿Analyzing: 3rd Year
+Fitness: 1.00%
+Generated: 2026-03-08 03:26:45.074435+00:00
+================================================================================
+python.exe : Traceback (most recent call last):
+At line:1 char:1
++ & "C:/Users/M srujitha/OneDrive/문서/Desktop/timetablescheduler/.venv/S ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last) 
+   ::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\de
+tect_conflicts.py", line 31, in <module>
+    print("\n\U0001f50d CONFLICT DETECTION:\n")
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f50d' in 
+position 2: character maps to <undefined>

@@ -7,6 +7,8 @@
 {% url 'meetingTimeAdd' as meetingTimeAdd %}
 {% url 'courseAdd' as courseAdd %}
 {% url 'yearEdit' as yearEdit %}
+{% url 'specialPeriodAdd' as specialPeriodAdd %}
+{% url 'view_timetable' as view_timetable %}
 
 
 <!DOCTYPE html>
@@ -42,17 +44,19 @@
           <span class="line line3"></span>
         </div>
         <div class="logo">
-          <h2><a href="{{ home }}">Time-Table Scheduler</a></h2>
-          <h4>Schedule Timetable with ease</h4>
+          <h2><a href="{{ home }}">TeachTrack</a></h2>
+          <h4>Smart Scheduler for Smart Classrooms</h4>
         </div>
         <ul class="menu-items">
+          {% if user.is_authenticated %}
           <li class="{% active request home %}"><a href="{{ home }}">Home</a></li>
           <li class="{% active request instructorAdd %}"><a href="{{ instructorAdd }}">Instructor</a></li>
           <li class="{% active request labRoomAdd %}"><a href="{% url 'labRoomAdd' %}">Lab Room</a></li>
-          <li class="{% active request meetingTimeAdd %}"><a href="{{ meetingTimeAdd }}">Meeting time</a></li>
+          <li class="{% active request meetingTimeAdd %}"><a href="{{ meetingTimeAdd }}">Period Timings</a></li>
           <li class="{% active request courseAdd %}"><a href="{{ courseAdd }}">Course</a></li>
           <li class="{% active request yearEdit %}"><a href="{{ yearEdit }}">Year</a></li>
-          {% if user.is_authenticated %}
+          <li class="{% active request specialPeriodAdd %}"><a href="{% url 'specialPeriodAdd' %}">Special Periods</a></li>
+          <li class="{% active request view_timetable %}"><a href="{{ view_timetable }}">View Timetable</a></li>
           <li><a href="{% url 'logout' %}"><i style="font-size:1.6rem" class="fa">&#xf08b;</i></a></li>
           {% endif %}
         </ul>

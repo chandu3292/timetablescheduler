@@ -8,9 +8,9 @@
 <fieldset class="fieldset">
   <div class="tablink">
     <a href="{% url 'meetingTimeAdd'%}">
-      <h1 onclick="openPage('new')" id="defaultOpen">Add Meeting time</h1>
+      <h1 onclick="openPage('new')" id="defaultOpen">Add Period Timings</h1>
     </a>
-    <h1 onclick="openPage('edit')" id="link_to_edit">Edit Meeting time</h1>
+    <h1 onclick="openPage('edit')" id="link_to_edit">Edit Period Timings</h1>
   </div>
   <div class="tabcontent" id="edit">
     <table class="editTable">
@@ -19,7 +19,7 @@
           <th>Year</th>
           <th>Day</th>
           <th>Timing</th>
-          <th class="empty"></th>
+          <th>Actions</th>
         </tr>
       </thead>
 
@@ -29,10 +29,12 @@
           <td>{{mt.year.year_name}}</td>
           <td>{{mt.day}}</td>
           <td>{{mt.time}}</td>
-          <td class="empty">
-            <form action="{% url 'deletemeetingtime' mt.pid %}" method="post">
+          <td>
+            <form action="{% url 'deletemeetingtime' mt.pid %}" method="post" style="margin: 0;">
               {% csrf_token %}
-              <input type="submit" value="X" class="cross">
+              <input type="submit" value="🗑️ Delete" class="cross" 
+                     style="background: #f44336; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;"
+                     onclick="return confirm('Are you sure you want to delete this period timing?');">
             </form>
           </td>
         </tr>

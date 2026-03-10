@@ -18,7 +18,7 @@
         <tr class="table-headers">
           <th>Year</th>
           <th>Courses</th>
-          <th class="empty"></th>
+          <th>Actions</th>
         </tr>
       </thead>
 
@@ -33,11 +33,19 @@
               No courses
             {% endfor %}
           </td>
-          <td class="empty">
-            <form action="{% url 'yearDelete' year.id %}" method="post">
-              {% csrf_token %}
-              <input type="submit" value="X" class="cross">
-            </form>
+          <td>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+              <a href="{% url 'yearUpdate' year.id %}" 
+                 style="background: #2196F3; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; font-size: 14px; font-weight: 500;">
+                ✏️ Edit
+              </a>
+              <form action="{% url 'yearDelete' year.id %}" method="post" style="margin: 0;">
+                {% csrf_token %}
+                <input type="submit" value="🗑️ Delete" class="cross" 
+                       style="background: #f44336; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;"
+                       onclick="return confirm('Are you sure you want to delete {{ year.year_name }}?');">
+              </form>
+            </div>
           </td>
         </tr>
         {% endfor %}

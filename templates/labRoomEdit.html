@@ -14,7 +14,7 @@
       <tr>
         <th>Lab Name</th>
         <th>Capacity</th>
-        <th class="empty"></th>
+        <th>Actions</th>
       </tr>
     </thead>
 
@@ -23,11 +23,19 @@
       <tr>
         <td>{{ lab.lab_name }}</td>
         <td>{{ lab.seating_capacity }}</td>
-        <td class="empty">
-          <form action="{% url 'labRoomDelete' lab.id %}" method="post">
-            {% csrf_token %}
-            <input type="submit" value="X" class="cross">
-          </form>
+        <td>
+          <div style="display: flex; gap: 10px; justify-content: center;">
+            <a href="{% url 'labRoomUpdate' lab.id %}" 
+               style="background: #2196F3; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; font-size: 14px; font-weight: 500;">
+              ✏️ Edit
+            </a>
+            <form action="{% url 'labRoomDelete' lab.id %}" method="post" style="margin: 0;">
+              {% csrf_token %}
+              <input type="submit" value="🗑️ Delete" class="cross" 
+                     style="background: #f44336; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;"
+                     onclick="return confirm('Are you sure you want to delete {{ lab.lab_name }}?');">
+            </form>
+          </div>
         </td>
       </tr>
       {% endfor %}

@@ -2,21 +2,210 @@
 {%block content%}
 {% load static %}
 
+<style>
+.bulk-add-section {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    border: 2px solid #667eea;
+}
 
-<form method="post">
-  {% csrf_token %}
-  <fieldset>
-    <div class="tablink">
-      <h1 onclick="openPage('new')" id="defaultOpen">Add Meeting time</h1>
-      <a href="{% url 'meetingTimeEdit' %}">
-        <h1 onclick="openPage('edit')" id="link_to_edit">Edit Meeting time</h1>
-      </a>
+.bulk-add-section h2 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.info-box {
+    background: #e3f2fd;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border-left: 4px solid #2196F3;
+}
+
+.info-box p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.days-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.day-checkbox {
+    display: flex;
+    align-items: center;
+    background: white;
+    padding: 12px;
+    border-radius: 5px;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.day-checkbox:hover {
+    border-color: #667eea;
+    background: #f0f2ff;
+}
+
+.day-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.day-checkbox label {
+    cursor: pointer;
+    font-weight: 500;
+    margin: 0;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.btn-bulk {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-bulk:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.divider {
+    margin: 40px 0;
+    border-top: 2px dashed #ddd;
+    position: relative;
+}
+
+.divider span {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 0 15px;
+    color: #999;
+    font-weight: 600;
+}
+
+.single-add-section {
+    padding: 20px;
+}
+</style>
+
+<fieldset class="fieldset">
+  <div class="tablink">
+    <h1 onclick="openPage('new')" id="defaultOpen">Add Period Timings</h1>
+    <a href="{% url 'meetingTimeEdit' %}">
+      <h1 onclick="openPage('edit')" id="link_to_edit">Edit Period Timings</h1>
+    </a>
+  </div>
+
+  <div class="tabcontent" id="new">
+    
+    <!-- BULK ADD SECTION -->
+    <div class="bulk-add-section">
+      <h2>📅 Bulk Add Period Timings for a Year</h2>
+      
+      <div class="info-box">
+        <p><strong>ℹ️ Note:</strong></p>
+        <p>• <strong>1st Year:</strong> Lunch break is 11:25 - 12:15 (automatically excluded)</p>
+        <p>• <strong>Other Years:</strong> Lunch break is 12:15 - 1:05 (automatically excluded)</p>
+        <p>• Select the days when this year has classes, and all time slots will be created automatically</p>
+        <p>• <strong>For half days:</strong> Create all period timings first, then delete unwanted time slots in Edit Period Timings</p>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="bulk_add" value="1">
+        
+        <div class="form-group">
+          <label for="year">Select Year:</label>
+          <select name="year" id="year" required>
+            <option value="">-- Select Year --</option>
+            {% for year in years %}
+              <option value="{{ year.id }}">{{ year.year_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Select Days (when this year has classes):</label>
+          <div class="days-grid">
+            {% for day_value, day_label in days %}
+            <div class="day-checkbox">
+              <input type="checkbox" name="days" value="{{ day_value }}" id="day_{{ day_value }}">
+              <label for="day_{{ day_value }}">{{ day_label }}</label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button type="submit" class="btn-bulk">✨ Create All Period Timings</button>
+      </form>
     </div>
-    <div class="tabcontent" id="new">
-      {{ form.as_p }}
-      <input type="submit" value="Submit" class="submit">
-    </div>
-  </fieldset>
-</form>
+
+  </div>
+</fieldset>
+
+<script>
+// Optional: Select all weekdays by default
+document.addEventListener('DOMContentLoaded', function() {
+    const yearSelect = document.getElementById('year');
+    const dayCheckboxes = document.querySelectorAll('input[name="days"]');
+    
+    // When year changes, suggest days
+    yearSelect.addEventListener('change', function() {
+        const yearName = this.options[this.selectedIndex].text.toLowerCase();
+        
+        // Uncheck all first
+        dayCheckboxes.forEach(cb => cb.checked = false);
+        
+        // Auto-select common days (Monday-Friday)
+        dayCheckboxes.forEach(cb => {
+            if (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(cb.value)) {
+                cb.checked = true;
+            }
+            
+            // For 1st year, also select Saturday
+            if (yearName.includes('1st') && cb.value === 'Saturday') {
+                cb.checked = true;
+            }
+        });
+    });
+});
+</script>
 
 {% endblock %}

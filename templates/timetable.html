@@ -8,24 +8,21 @@
   <a href="{% url 'lab_timetable' %}" class="btn">Lab View</a>
   {% if from_database and selected_year %}
     <a href="{% url 'download_timetable_pdf' %}?year={{ selected_year.id }}" class="btn" style="background: #4CAF50; color: white;">📥 Download PDF</a>
-    <a href="?year={{ selected_year.id }}&regenerate=true" class="btn" style="background: #ff9800;">Regenerate Timetable</a>
+    <a href="?year={{ selected_year.id }}&regenerate=true" class="btn" style="background: #ff9800;">🔄 Regenerate Timetable</a>
   {% endif %}
 </div>
 
 {% if error_message %}
-<div style="background: #ffebee; border: 2px solid #f44336; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #c62828;">
-  <h3 style="margin: 0; color: #c62828;">⚠️ Generation Failed</h3>
+<div style="background: #fff3cd; border: 2px solid #ffc107; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #856404;">
+  <h3 style="margin: 0; color: #856404;">ℹ️ Using Existing Timetable</h3>
   <p style="margin: 10px 0 0 0;">{{ error_message }}</p>
-  {% if failed_fitness %}
-    <p style="margin: 5px 0 0 0;"><strong>Failed fitness:</strong> {{ failed_fitness|floatformat:4 }}%</p>
-  {% endif %}
   <p style="margin: 10px 0 0 0; font-size: 0.9em;">
-    <strong>Suggestions:</strong>
-    <ul style="margin: 5px 0 0 20px;">
-      <li>Check <a href="{% url 'data_check' %}?year={{ selected_year.id }}" style="color: #1976d2;">Data Check</a> for missing assignments</li>
-      <li>Ensure all courses have instructors assigned</li>
-      <li>Verify room and time slot availability</li>
-    </ul>
+    <strong>How to Regenerate Timetables:</strong><br>
+    Run <code style="background: #fff; padding: 2px 6px; border-radius: 3px; border: 1px solid #ddd;">python generate_sequential.py</code> from the command line.<br>
+    This generates all years sequentially to avoid cross-year instructor conflicts.
+  </p>
+  <p style="margin: 10px 0 0 0; font-size: 0.9em;">
+    <strong>For Single Year:</strong> <code style="background: #fff; padding: 2px 6px; border-radius: 3px; border: 1px solid #ddd;">python regenerate_single_year.py "{{ selected_year.year_name }}"</code>
   </p>
 </div>
 {% endif %}
@@ -82,7 +79,8 @@
           {% else %}
 
               <td>
-                {% sub schedule section_number week.0 time.0 %}
+                {% sub schedule section_number week.0 time.0 as cell_content %}
+                {{ cell_content|safe }}
               </td>
 
           {% endif %}

@@ -14,11 +14,11 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700,300italic,400italic,600italic">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="{% static 'CSS/login.css' %}">
+    <link rel="stylesheet" href="{% static 'CSS/login.css' %}?v=2.5">
 
   </head>
   <body>
-    <form method="post" id="form1">
+    <form method="post" id="form1" style="width: 100%;">
       {% csrf_token %}
       <div id="divLOGINPAGE" class="sr">
         <div class="login-box-body">
@@ -26,11 +26,9 @@
             <div class="col">
               <div class="text-center loginLeft">
                 <h4 class="logWelC">WELCOME TO </h4>
-                <img class="logoLogin" src="{% static 'img/logo.jpg' %}">
-                <h3 class="Alignment">
-                  <center><strong>ANITS</strong></center>
-                </h3>
-                <h5><a target="_blank" href="https://anits.org/">https://anits.org/</a></h5>
+                <a href="https://anits.org/" target="_blank" class="logo-link">
+                  <img class="logoLogin" src="{% static 'img/logo.jpg' %}" alt="ANITS Logo">
+                </a>
               </div>
             </div>
             <div class="col">

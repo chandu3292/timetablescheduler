@@ -14,15 +14,46 @@ def sub(schedule, section_number, day, time):
     '''
     Returns the subject-teacher for a SECTION, weekday and time period
     (SECTION-wise timetable)
+    Shows batch information for split labs
     '''
+    classes_at_time = []
     for c in schedule:
         if (
             c.section_number == section_number and
             c.meeting_time.day == day and
             c.meeting_time.time == time
         ):
-            return f'{c.course.course_name} ({c.instructor.name})'
-    return ''
+            classes_at_time.append(c)
+    
+    if not classes_at_time:
+        return ''
+    
+    # If only one class (normal case)
+    if len(classes_at_time) == 1:
+        c = classes_at_time[0]
+        instructor_name = c.instructor.name if c.instructor else 'No Instructor'
+        room_info = f', {c.room}' if c.room else ''
+        
+        # Check if this is a split lab
+        if hasattr(c, 'batch') and c.batch != 'FULL':
+            return f'{c.course.course_name} [{c.batch}] ({instructor_name}{room_info})'
+        else:
+            return f'{c.course.course_name} ({instructor_name}{room_info})'
+    
+    # Multiple classes at same time (batch splitting)
+    # Group by batch
+    result = []
+    for c in classes_at_time:
+        instructor_name = c.instructor.name if c.instructor else 'No Instructor'
+        room_info = f', {c.room}' if c.room else ''
+        batch_label = c.batch if hasattr(c, 'batch') and c.batch != 'FULL' else ''
+        
+        if batch_label:
+            result.append(f'{c.course.course_name} [{batch_label}] ({instructor_name}{room_info})')
+        else:
+            result.append(f'{c.course.course_name} ({instructor_name}{room_info})')
+    
+    return '<br>'.join(result)
 
 
 @register.simple_tag
@@ -30,7 +61,7 @@ def sub_instructor(schedule, instructor, day, time):
     '''
     Returns the subject for an INSTRUCTOR, weekday and time period
     (Instructor-wise timetable)
-    Shows co-instructors for LAB courses
+    Shows co-instructors for LAB courses and batch information for split labs
     '''
     from SchedulerApp.models import CourseInstructorAssignment
     
@@ -41,6 +72,7 @@ def sub_instructor(schedule, instructor, day, time):
             c.meeting_time.time == time
         ):
             room_info = f', {c.room}' if c.room else ''
+            batch_info = f' [{c.batch}]' if hasattr(c, 'batch') and c.batch != 'FULL' else ''
             
             # For LAB courses, show co-instructors
             if c.course.course_type == 'LAB':
@@ -56,9 +88,9 @@ def sub_instructor(schedule, instructor, day, time):
                     other_instructors = [inst.name for inst in assignment.instructors.all() if inst != instructor]
                     if other_instructors:
                         co_inst_text = f' (with {", ".join(other_instructors)})'
-                        return f'{c.course.course_name} ({c.year.year_name} - Sec {c.section_number}{room_info}{co_inst_text})'
+                        return f'{c.course.course_name}{batch_info} ({c.year.year_name} - Sec {c.section_number}{room_info}{co_inst_text})'
             
-            return f'{c.course.course_name} ({c.year.year_name} - Sec {c.section_number}{room_info})'
+            return f'{c.course.course_name}{batch_info} ({c.year.year_name} - Sec {c.section_number}{room_info})'
     return ''
 
 

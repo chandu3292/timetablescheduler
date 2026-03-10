@@ -74,7 +74,7 @@ if conflict_count == 0:
 lab_conflicts = defaultdict(list)
 for entry in all_entries:
     if entry.lab_room:
-        key = (entry.lab_room.room_number, entry.meeting_time.day, entry.meeting_time.time)
+        key = (entry.lab_room.lab_name, entry.meeting_time.day, entry.meeting_time.time)
         lab_conflicts[key].append(entry)
 
 print("\n3️⃣  LAB ROOM CONFLICTS (same room, multiple sections, same time):")

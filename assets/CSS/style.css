@@ -525,7 +525,7 @@ fieldset {
 .editTable td,
 .timetable th,
 .timetable td {
-  padding: 1.2rem 1.5rem;
+  padding: 0.6rem 0.8rem;
 }
 
 .editTable tbody tr,
@@ -544,7 +544,7 @@ fieldset {
 }
 
 .timetable {
-  font-size: 1.6rem;
+  font-size: 1.2rem;
   width: 100%;
   margin-bottom: 100px;
 }

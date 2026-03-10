@@ -1,0 +1,820 @@
+{% extends 'base.html' %}
+{% load index %}
+
+{% block content %}
+<style>
+/* View Timetable Styles */
+.view-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.filter-section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.filter-section h2 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.filter-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    align-items: end;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.filter-group select,
+.filter-group input[type="checkbox"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.filter-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.btn-filter {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+
+.btn-filter:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-reset {
+    background: #6c757d;
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: 10px;
+}
+
+/* Results Section */
+.results-section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.results-header h3 {
+    color: #667eea;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.results-count {
+    background: #667eea;
+    color: wh10px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 16px0px;
+    font-weight: 600;
+}
+
+/* Timetable Grid */
+.timetable-grid {
+    overflow-x: auto;
+}
+
+table.timetable {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+table.timetable th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 10px 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 13px;
+    border: 1px solid #ddd;
+}
+
+table.timetable td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: center;
+    min-height: 70px;
+    vertical-align: top;
+    background: #fafafa;
+}
+
+table.timetable td:first-child {
+    background: #f0f2ff;
+    font-weight: 600;
+    font-size: 13px;
+    color: #667eea;
+    width: 100px;
+}
+
+.class-card {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    border-radius: 6px;
+    padding: 8px 6px;
+    margin: 3px;
+    font-size: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-height: 55px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.class-card.lab {
+    background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+}
+
+.class-card.elective {
+    background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+    color: white;
+}
+
+.class-course {
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+.class-instructor {
+    font-size: 11px;
+    opacity: 0.9;
+    margin-bottom: 3px;
+}
+
+.class-room {
+    font-size: 10px;
+    margin-top: 3px;
+    font-style: italic;
+    opacity: 0.85;
+}
+
+/* Free Faculty List */
+.faculty-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.faculty-card {
+    background: #f8f9fa;
+    border-left: 4px solid #28a745;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.faculty-card.busy {
+    border-left-color: #dc3545;
+    background: #fff5f5;
+}
+
+.faculty-card h4 {
+    margin: 0 0 8px 0;
+    color: #333;
+}
+
+.faculty-card p {
+    margin: 4px 0;
+    font-size: 13px;
+    color: #666;
+}
+
+.no-results {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-size: 18px;
+}
+
+/* Tab indicator for view type */
+.view-type-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+}
+
+.view-type-tab {
+    padding: 12px 24px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-bottom: 3px solid transparent;
+    font-weight: 600;
+    font-size: 17px;
+    color: #666;
+    transition: all 0.3s;
+}
+
+.view-type-tab.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+.view-type-tab:hover {
+    color: #667eea;
+}
+
+/* Success banner */
+.success-banner {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.success-banner i {
+    font-size: 24px;
+}
+
+/* Separator between multiple timetables */
+.timetable-separator {
+    border-top: 3px solid #e0e0e0;
+    margin: 50px 0 30px 0;
+}
+
+/* Enhanced spacing for multi-timetable views */
+.multi-timetable-wrapper {
+    margin-bottom: 60px;
+}
+</style>
+
+<div class="view-container">
+    <h1 style="text-align: center; color: #667eea; margin-bottom: 30px; font-size: 36px; font-weight: 700;">View Timetable</h1>
+    
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <h2>Select View Format</h2>
+        
+        <!-- View Type Tabs -->
+        <div class="view-type-tabs">
+            <button class="view-type-tab {% if view_type == 'section' %}active{% endif %}" onclick="selectViewType('section')">Section-wise</button>
+            <button class="view-type-tab {% if view_type == 'year' %}active{% endif %}" onclick="selectViewType('year')">Year-wise</button>
+            <button class="view-type-tab {% if view_type == 'faculty' %}active{% endif %}" onclick="selectViewType('faculty')">Faculty-wise</button>
+            <button class="view-type-tab {% if view_type == 'lab' %}active{% endif %}" onclick="selectViewType('lab')">Lab-wise</button>
+            <button class="view-type-tab {% if view_type == 'period' %}active{% endif %}" onclick="selectViewType('period')">Period-wise</button>
+        </div>
+        
+        <form id="filterForm" method="GET">
+            <input type="hidden" name="view_type" id="view_type" value="{{ view_type }}">
+            
+            <!-- Section-wise Filters -->
+            <div id="section_filters" class="filter-content" style="display: {% if view_type == 'section' %}block{% else %}none{% endif %};">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="year_section">Select Year:</label>
+                        <select name="year" id="year_section" required>
+                            <option value="">-- Select Year --</option>
+                            {% for year in years %}
+                                <option value="{{ year.id }}" {% if selected_year and selected_year.id == year.id %}selected{% endif %}>{{ year.year_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="section">Select Section:</label>
+                        <select name="section" id="section" required>
+                            <option value="">-- Select Section --</option>
+                            {% for sec in sections %}
+                                <option value="{{ sec }}" {% if selected_section == sec|stringformat:"s" %}selected{% endif %}>Section {{ sec }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <button type="submit" class="btn-filter">View Timetable</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Year-wise Filters -->
+            <div id="year_filters" class="filter-content" style="display: {% if view_type == 'year' %}block{% else %}none{% endif %};">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="year_year">Select Year:</label>
+                        <select name="year" id="year_year" required>
+                            <option value="">-- Select Year --</option>
+                            {% for year in years %}
+                                <option value="{{ year.id }}" {% if selected_year and selected_year.id == year.id %}selected{% endif %}>{{ year.year_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <button type="submit" class="btn-filter">View Timetable</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Faculty-wise Filters -->
+            <div id="faculty_filters" class="filter-content" style="display: {% if view_type == 'faculty' %}block{% else %}none{% endif %};">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="faculty">Select Faculty:</label>
+                        <select name="faculty" id="faculty">
+                            <option value="">-- Select Faculty --</option>
+                            {% for instructor in instructors %}
+                                <option value="{{ instructor.id }}" {% if selected_faculty and selected_faculty.id == instructor.id %}selected{% endif %}>{{ instructor.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <div class="checkbox-label">
+                            <input type="checkbox" name="all_faculties" id="all_faculties" value="true" {% if all_faculties_view %}checked{% endif %} onchange="toggleFacultySelect()">
+                            <label for="all_faculties" style="margin: 0;">View All Faculties</label>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <button type="submit" class="btn-filter">View Timetable</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lab-wise Filters -->
+            <div id="lab_filters" class="filter-content" style="display: {% if view_type == 'lab' %}block{% else %}none{% endif %};">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="lab">Select Lab:</label>
+                        <select name="lab" id="lab">
+                            <option value="">-- Select Lab --</option>
+                            {% for lab in labs %}
+                                <option value="{{ lab.id }}" {% if selected_lab and selected_lab.id == lab.id %}selected{% endif %}>{{ lab.lab_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <div class="checkbox-label">
+                            <input type="checkbox" name="all_labs" id="all_labs" value="true" {% if all_labs_view %}checked{% endif %} onchange="toggleLabSelect()">
+                            <label for="all_labs" style="margin: 0;">View All Labs</label>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <button type="submit" class="btn-filter">View Timetable</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Period-wise Filters -->
+            <div id="period_filters" class="filter-content" style="display: {% if view_type == 'period' %}block{% else %}none{% endif %};">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="day">Select Day:</label>
+                        <select name="day" id="day" required>
+                            <option value="">-- Select Day --</option>
+                            {% for day in weekDays %}
+                                <option value="{{ day }}" {% if selected_day == day %}selected{% endif %}>{{ day }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="time">Select Time Period:</label>
+                        <select name="time" id="time" required>
+                            <option value="">-- Select Time --</option>
+                            {% for slot in timeSlots %}
+                                <option value="{{ slot }}" {% if selected_time == slot %}selected{% endif %}>{{ slot }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <button type="submit" class="btn-filter">Find Free Faculty</button>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" class="btn-reset" onclick="resetForm()">Reset Filters</button>
+        </form>
+    </div>
+    
+    <!-- Results Section -->
+    {% if view_type %}
+        <div class="results-section" id="results">
+            <!-- Success Banner -->
+            <div class="success-banner">
+                <span style="font-size: 24px;">✓</span>
+                <span>Timetable loaded successfully! Scroll down to view the schedule.</span>
+            </div>
+            
+            {% if view_type == 'period' %}
+                <!-- Period-wise Results: Free Faculty -->
+                {% if selected_day and selected_time %}
+                    <div class="results-header">
+                        <h3>Faculty Availability - {{ selected_day }} at {{ selected_time }}</h3>
+                        <div>
+                            <span class="results-count" style="background: #28a745;">Free: {{ total_free }}</span>
+                            <span class="results-count" style="background: #dc3545; margin-left: 10px;">Busy: {{ total_busy }}</span>
+                        </div>
+                    </div>
+                    
+                    <h4 style="color: #28a745; margin-top: 20px;">✓ Free Faculty</h4>
+                    {% if free_faculty %}
+                        <div class="faculty-list">
+                            {% for faculty in free_faculty %}
+                                <div class="faculty-card">
+                                    <h4>{{ faculty.name }}</h4>
+                                    <p><strong>ID:</strong> {{ faculty.uid }}</p>
+                                    <p><strong>Status:</strong> Available</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-results">No faculty are free at this time.</p>
+                    {% endif %}
+                    
+                    <h4 style="color: #dc3545; margin-top: 30px;">✗ Busy Faculty</h4>
+                    {% if busy_faculty %}
+                        <div class="faculty-list">
+                            {% for entry in busy_faculty %}
+                                <div class="faculty-card busy">
+                                    <h4>{{ entry.instructor.name }}</h4>
+                                    <p><strong>Teaching:</strong> {{ entry.course.course_number }} - {{ entry.course.course_name }}</p>
+                                    <p><strong>Year:</strong> {{ entry.year.year_name }} (Section {{ entry.section_number }})</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-results">All faculty are free at this time!</p>
+                    {% endif %}
+                {% endif %}
+                
+            {% else %}
+                <!-- Regular Timetable Display -->
+                
+                <!-- YEAR-WISE: Show separate timetable for each section -->
+                {% if view_type == 'year' and sections_data %}
+                    {% for section_data in sections_data %}
+                        <div class="results-header" style="margin-top: {% if not forloop.first %}40px{% else %}0{% endif %};">
+                            <h3>{{ selected_year.year_name }} - Section {{ section_data.section_number }} Timetable</h3>
+                            <span class="results-count">{{ section_data.total_classes }} Classes</span>
+                        </div>
+                        
+                        <div class="timetable-grid">
+                            <table class="timetable">
+                                <thead>
+                                    <tr>
+                                        <th>Day / Period</th>
+                                        {% for slot in timeSlots %}
+                                            <th>{{ slot }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for day in weekDays %}
+                                        <tr>
+                                            <td><strong>{{ day }}</strong></td>
+                                            {% for slot in timeSlots %}
+                                                <td>
+                                                    {% for class in section_data.schedule %}
+                                                        {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
+                                                            <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
+                                                                <div class="class-course">{{ class.course.course_name }}</div>
+                                                                {% if class.instructor %}
+                                                                    <div class="class-instructor">{{ class.instructor.name }}</div>
+                                                                {% endif %}
+                                                                {% if class.room %}
+                                                                    <div class="class-room">{{ class.room.lab_name }}</div>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endfor %}
+                
+                <!-- FACULTY-WISE: Show separate timetable for each faculty -->
+                {% elif view_type == 'faculty' and faculties_data %}
+                    {% for faculty_data in faculties_data %}
+                        <div class="results-header" style="margin-top: {% if not forloop.first %}40px{% else %}0{% endif %};">
+                            <h3>{{ faculty_data.instructor.name }}'s Timetable</h3>
+                            <span class="results-count">{{ faculty_data.total_classes }} Classes</span>
+                        </div>
+                        
+                        <div class="timetable-grid">
+                            <table class="timetable">
+                                <thead>
+                                    <tr>
+                                        <th>Day / Period</th>
+                                        {% for slot in timeSlots %}
+                                            <th>{{ slot }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for day in weekDays %}
+                                        <tr>
+                                            <td><strong>{{ day }}</strong></td>
+                                            {% for slot in timeSlots %}
+                                                <td>
+                                                    {% for class in faculty_data.schedule %}
+                                                        {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
+                                                            <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
+                                                                <div class="class-course">{{ class.course.course_name }}</div>
+                                                                <div class="class-room">{{ class.year.year_name }} S{{ class.section_number }}</div>
+                                                                {% if class.room %}
+                                                                    <div class="class-room">{{ class.room.lab_name }}</div>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endfor %}
+                
+                <!-- LAB-WISE: Show separate timetable for each lab -->
+                {% elif view_type == 'lab' and labs_data %}
+                    {% for lab_data in labs_data %}
+                        <div class="results-header" style="margin-top: {% if not forloop.first %}40px{% else %}0{% endif %};">
+                            <h3>{{ lab_data.lab.lab_name }} Schedule</h3>
+                            <span class="results-count">{{ lab_data.total_classes }} Classes</span>
+                        </div>
+                        
+                        <div class="timetable-grid">
+                            <table class="timetable">
+                                <thead>
+                                    <tr>
+                                        <th>Day / Period</th>
+                                        {% for slot in timeSlots %}
+                                            <th>{{ slot }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for day in weekDays %}
+                                        <tr>
+                                            <td><strong>{{ day }}</strong></td>
+                                            {% for slot in timeSlots %}
+                                                <td>
+                                                    {% for class in lab_data.schedule %}
+                                                        {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
+                                                            <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
+                                                                <div class="class-course">{{ class.course.course_name }}</div>
+                                                                {% if class.instructor %}
+                                                                    <div class="class-instructor">{{ class.instructor.name }}</div>
+                                                                {% endif %}
+                                                                <div class="class-room">{{ class.year.year_name }} S{{ class.section_number }}</div>
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endfor %}
+                
+                <!-- SINGLE VIEW: Section-wise or single faculty/lab -->
+                {% elif schedule %}
+                    <div class="results-header">
+                        <h3>
+                            {% if view_type == 'section' %}
+                                {{ selected_year.year_name }} - Section {{ selected_section }} Timetable
+                            {% elif view_type == 'faculty' %}
+                                {{ selected_faculty.name }}'s Timetable
+                            {% elif view_type == 'lab' %}
+                                {{ selected_lab.lab_name }} Schedule
+                            {% endif %}
+                        </h3>
+                        <span class="results-count">{{ total_classes }} Classes</span>
+                    </div>
+                    
+                    <div class="timetable-grid">
+                        <table class="timetable">
+                            <thead>
+                                <tr>
+                                    <th>Day / Period</th>
+                                    {% for slot in timeSlots %}
+                                        <th>{{ slot }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for day in weekDays %}
+                                    <tr>
+                                        <td><strong>{{ day }}</strong></td>
+                                        {% for slot in timeSlots %}
+                                            <td>
+                                                {% for class in schedule %}
+                                                    {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
+                                                        <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
+                                                            <div class="class-course">{{ class.course.course_name }}</div>
+                                                            {% if class.instructor %}
+                                                                <div class="class-instructor">{{ class.instructor.name }}</div>
+                                                            {% endif %}
+                                                            {% if class.room %}
+                                                                <div class="class-room">{{ class.room.lab_name }}</div>
+                                                            {% endif %}
+                                                            {% if view_type == 'year' or view_type == 'faculty' or view_type == 'lab' %}
+                                                                <div class="class-room">{{ class.year.year_name }} S{{ class.section_number }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="no-results">No classes found for the selected criteria.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function selectViewType(type) {
+    console.log('selectViewType called with:', type);
+    document.getElementById('view_type').value = type;
+    console.log('Hidden field view_type set to:', document.getElementById('view_type').value);
+    
+    // Hide all filter contents and disable their inputs
+    document.querySelectorAll('.filter-content').forEach(el => {
+        el.style.display = 'none';
+        // Disable all inputs in hidden sections to prevent validation (except checkboxes)
+        el.querySelectorAll('select, input:not([type="checkbox"])').forEach(input => {
+            input.disabled = true;
+        });
+    });
+    
+    // Show selected filter content and enable its inputs
+    const selectedDiv = document.getElementById(type + '_filters');
+    selectedDiv.style.display = 'block';
+    selectedDiv.querySelectorAll('select, input:not([type="checkbox"])').forEach(input => {
+        // Only enable if it's not supposed to be disabled (like when checkbox is checked)
+        if (!input.classList.contains('keep-disabled')) {
+            input.disabled = false;
+        }
+    });
+    
+    // Update tab styling
+    document.querySelectorAll('.view-type-tab').forEach(tab => tab.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+// Add form submission logging
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize: disable all hidden filter sections
+    const currentViewType = document.getElementById('view_type').value;
+    document.querySelectorAll('.filter-content').forEach(el => {
+        if (el.style.display === 'none') {
+            // Disable all inputs in hidden sections
+            el.querySelectorAll('input:not([type="checkbox"]), select').forEach(input => {
+                input.disabled = true;
+            });
+        }
+    });
+    
+    // Enable inputs in the currently visible section
+    if (currentViewType) {
+        const visibleDiv = document.getElementById(currentViewType + '_filters');
+        if (visibleDiv) {
+            visibleDiv.querySelectorAll('input:not([type="checkbox"]), select').forEach(input => {
+                if (!input.classList.contains('keep-disabled')) {
+                    input.disabled = false;
+                }
+            });
+        }
+    }
+    
+    const form = document.getElementById('filterForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const viewType = document.getElementById('view_type').value;
+            const formData = new FormData(form);
+            
+            console.log('=== FORM SUBMISSION ===');
+            console.log('view_type:', viewType);
+            console.log('Form data:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}: ${value}`);
+            }
+            console.log('======================');
+            
+            // Don't prevent default - let form submit normally
+        });
+    }
+    
+    {% if all_faculties_view %}
+        toggleFacultySelect();
+    {% endif %}
+    
+    {% if all_labs_view %}
+        toggleLabSelect();
+    {% endif %}
+    
+    // Auto-scroll to results if they exist
+    {% if view_type and schedule or view_type == 'period' and selected_day %}
+        const resultsSection = document.querySelector('.results-section');
+        if (resultsSection) {
+            setTimeout(function() {
+                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        }
+    {% endif %}
+});
+
+function toggleFacultySelect() {
+    const checkbox = document.getElementById('all_faculties');
+    const select = document.getElementById('faculty');
+    
+    if (checkbox.checked) {
+        select.disabled = true;
+        select.value = '';
+        select.classList.add('keep-disabled');
+    } else {
+        select.disabled = false;
+        select.classList.remove('keep-disabled');
+    }
+}
+
+function toggleLabSelect() {
+    const checkbox = document.getElementById('all_labs');
+    const select = document.getElementById('lab');
+    
+    if (checkbox.checked) {
+        select.disabled = true;
+        select.value = '';
+        select.classList.add('keep-disabled');
+    } else {
+        select.disabled = false;
+        select.classList.remove('keep-disabled');
+    }
+}
+
+function resetForm() {
+    window.location.href = '{% url "view_timetable" %}';
+}
+</script>
+
+{% endblock %}
