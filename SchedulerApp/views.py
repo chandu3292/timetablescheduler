@@ -9,6 +9,8 @@ Hard constraints (penalty 100 each):
   H5  Lab not in correct room   – course.lab_rooms not respected
   H6  Lab room clash            – same lab_room, same day+time
   H7  hours_per_week not met    – 100 per missing hour
+  H8  Faculty daily overload    – max 3 hours/day per instructor
+  H9  Faculty weekly overload   – max 21 hours/week per instructor
 
 Soft constraints:
   S1  All theory on one day     – 80
@@ -32,18 +34,23 @@ from .models import (
     Instructor, LabRoom, Course, Department, Year, MeetingTime,
     CourseInstructorAssignment, SpecialPeriod, GeneratedTimetable,
     TimetableEntry, LabBatchAssignment, TIME_SLOTS, DAYS_OF_WEEK,
+    DESIGNATION_CHOICES,
 )
+
+# Faculty workload limits
+MAX_HOURS_PER_DAY  = 3
+MAX_HOURS_PER_WEEK = 21
 
 logger = logging.getLogger(__name__)
 
 # ── GA / SA constants ──────────────────────────────────────────────────────────
-POPULATION_SIZE         = 50
+POPULATION_SIZE         = 30
 NUMB_OF_ELITE_SCHEDULES = 3
 TOURNAMENT_SIZE         = 5
 MUTATION_RATE           = 0.08
-RESTART_AFTER           = 15
-MAX_GENERATIONS         = 1000
-TARGET_FITNESS          = 0.90
+RESTART_AFTER           = 10
+MAX_GENERATIONS         = 300
+TARGET_FITNESS          = 0.85
 
 SA_INITIAL_TEMP = 5.0
 SA_COOLING_RATE = 0.95
@@ -143,6 +150,10 @@ class Data:
                 self._course_lookup.get(c.course_number, c) for c in courses
             ]
 
+        # Cache assistant professors for lab evaluator assignment
+        self._assistant_profs = [i for i in self._instructors
+                                 if i.designation == 'Assistant Professor']
+
     def _compute_lab_blocks(self, mts):
         by_day = defaultdict(list)
         for mt in mts:
@@ -170,6 +181,7 @@ class Data:
     def courses_for_year(self, yid): return self._courses_by_year.get(yid, [])
     def cias_for_year(self, yid): return self._cias_by_year.get(yid, [])
     def specials_for_year(self, yid): return self._specials_by_year.get(yid, [])
+    def assistant_profs(self):    return self._assistant_profs
 
 
 _data = None   # refreshed each timetable request
@@ -179,10 +191,11 @@ _data = None   # refreshed each timetable request
 class Gene:
     """One scheduled block: year+section+course → meeting_times+instructor+lab_room."""
     __slots__ = ('year_id', 'section', 'course', 'meeting_times',
-                 'instructor', 'lab_room', 'batch', 'is_special')
+                 'instructor', 'lab_room', 'batch', 'is_special', 'evaluators')
 
     def __init__(self, year_id, section, course, meeting_times,
-                 instructor=None, lab_room=None, batch='FULL', is_special=False):
+                 instructor=None, lab_room=None, batch='FULL', is_special=False,
+                 evaluators=None):
         self.year_id       = year_id
         self.section       = section
         self.course        = course
@@ -191,11 +204,13 @@ class Gene:
         self.lab_room      = lab_room
         self.batch         = batch
         self.is_special    = is_special
+        self.evaluators    = evaluators or []  # list[Instructor] for labs
 
     def copy(self):
         return Gene(self.year_id, self.section, self.course,
                     list(self.meeting_times), self.instructor,
-                    self.lab_room, self.batch, self.is_special)
+                    self.lab_room, self.batch, self.is_special,
+                    list(self.evaluators))
 
 
 class _PseudoCourse:
@@ -243,6 +258,8 @@ class Schedule:
         # Cross-year/cross-section tracking to prevent H1 and H6 at init time
         room_daytime_used: dict = {}   # (room_id, day, time) → True
         inst_daytime_used: dict = {}   # (inst_id, day, time)  → True
+        inst_day_count: dict = defaultdict(int)    # (inst_id, day) → hours
+        inst_week_count: dict = defaultdict(int)   # inst_id → total hours
 
         for year in d.years():
             year_id  = year.id
@@ -317,11 +334,31 @@ class Schedule:
                                         for mt in b)
                                 for r in lr_pool) if lr_pool else True
 
-                        # Best: section-free AND has a free room
+                        def _inst_workload_ok(b):
+                            """Check instructor won't exceed daily/weekly limits."""
+                            if not inst:
+                                return True
+                            days_in_block = set(mt.day for mt in b)
+                            for day in days_in_block:
+                                day_add = sum(1 for mt in b if mt.day == day)
+                                if inst_day_count[(inst.id, day)] + day_add > MAX_HOURS_PER_DAY:
+                                    return False
+                            if inst_week_count[inst.id] + len(b) > MAX_HOURS_PER_WEEK:
+                                return False
+                            return True
+
+                        # Best: section-free AND has a free room AND workload ok
                         avail = [b for b in d.get_lab_blocks(year_id, need)
-                                 if _sec_free(b) and _has_free_room(b)]
+                                 if _sec_free(b) and _has_free_room(b) and _inst_workload_ok(b)]
                         if not avail:
                             # Relax room constraint
+                            avail = [b for b in d.get_lab_blocks(year_id, need)
+                                     if _sec_free(b) and _inst_workload_ok(b)]
+                        if not avail:
+                            # Relax workload constraint
+                            avail = [b for b in d.get_lab_blocks(year_id, need)
+                                     if _sec_free(b) and _has_free_room(b)]
+                        if not avail:
                             avail = [b for b in d.get_lab_blocks(year_id, need)
                                      if _sec_free(b)]
                         if not avail:
@@ -353,6 +390,8 @@ class Schedule:
                         if inst:
                             for mt in block:
                                 inst_daytime_used[(inst.id, mt.day, mt.time)] = True
+                                inst_day_count[(inst.id, mt.day)] += 1
+                            inst_week_count[inst.id] += len(block)
                         genes.append(Gene(year_id, sec, c, block, inst, lr))
                         used.update(mt.pid for mt in block)
                         placed += len(block)
@@ -368,6 +407,8 @@ class Schedule:
                         if inst:
                             for mt in mts:
                                 inst_daytime_used[(inst.id, mt.day, mt.time)] = True
+                                inst_day_count[(inst.id, mt.day)] += 1
+                            inst_week_count[inst.id] += len(mts)
                         genes.append(Gene(year_id, sec, c, list(mts), inst))
                         used.update(mt.pid for mt in mts)
 
@@ -383,7 +424,15 @@ class Schedule:
                     for _ in range(hrs):
                         free = [mt for mt in year_mts
                                 if mt.pid not in used
-                                and (mt.day, mt.time) not in inst_busy]
+                                and (mt.day, mt.time) not in inst_busy
+                                and (not inst or (
+                                    inst_day_count[(inst.id, mt.day)] < MAX_HOURS_PER_DAY
+                                    and inst_week_count[inst.id] < MAX_HOURS_PER_WEEK))]
+                        if not free:
+                            # Relax workload constraint
+                            free = [mt for mt in year_mts
+                                    if mt.pid not in used
+                                    and (mt.day, mt.time) not in inst_busy]
                         if not free:
                             free = [mt for mt in year_mts if mt.pid not in used]
                         if not free:
@@ -392,6 +441,8 @@ class Schedule:
                         if inst:
                             inst_daytime_used[(inst.id, mt.day, mt.time)] = True
                             inst_busy.add((mt.day, mt.time))
+                            inst_day_count[(inst.id, mt.day)] += 1
+                            inst_week_count[inst.id] += 1
                         genes.append(Gene(year_id, sec, c, [mt], inst))
                         used.add(mt.pid)
 
@@ -404,6 +455,8 @@ class Schedule:
                         if inst:
                             for mt in mts:
                                 inst_daytime_used[(inst.id, mt.day, mt.time)] = True
+                                inst_day_count[(inst.id, mt.day)] += 1
+                            inst_week_count[inst.id] += len(mts)
                         genes.append(Gene(year_id, sec, pseudo, list(mts),
                                           inst, is_special=True))
 
@@ -479,6 +532,24 @@ class Schedule:
                 actual = chours[key]
                 if actual < req:
                     penalty += P_HARD * (req - actual)
+
+        # H8 – faculty daily overload (max 3 hours per day per instructor)
+        inst_day_hours = defaultdict(int)   # (inst_id, day) → hours
+        for g in genes:
+            if g.instructor and isinstance(g.instructor, Instructor):
+                for mt in g.meeting_times:
+                    inst_day_hours[(g.instructor.id, mt.day)] += 1
+        for count in inst_day_hours.values():
+            if count > MAX_HOURS_PER_DAY:
+                penalty += P_HARD * (count - MAX_HOURS_PER_DAY)
+
+        # H9 – faculty weekly overload (max 21 hours per week per instructor)
+        inst_week_hours = defaultdict(int)  # inst_id → total hours
+        for (iid, _day), count in inst_day_hours.items():
+            inst_week_hours[iid] += count
+        for count in inst_week_hours.values():
+            if count > MAX_HOURS_PER_WEEK:
+                penalty += P_HARD * (count - MAX_HOURS_PER_WEEK)
 
         # ── soft constraints ──────────────────────────────────────────────────
         MORNING_SET   = set(range(4))
@@ -872,30 +943,205 @@ def _sa_cool():
     _sa_temp = max(SA_MIN_TEMP, _sa_temp * SA_COOLING_RATE)
 
 
+# ── Gap-filling ───────────────────────────────────────────────────────────────
+def _fill_gaps(schedule):
+    """Fill empty slots with repeat courses that don't create conflicts."""
+    d = _data
+    genes = schedule.genes()
+
+    for year in d.years():
+        year_id  = year.id
+        year_mts = d.mts_for_year(year_id)
+        if not year_mts:
+            continue
+
+        for sec in (1, 2, 3):
+            sec_genes = [g for g in genes if g.year_id == year_id and g.section == sec]
+            if not sec_genes:
+                continue
+
+            # Find occupied slots (exclude special periods — they're not saved to DB)
+            occupied_pids = set()
+            for g in sec_genes:
+                if g.is_special:
+                    continue
+                for mt in g.meeting_times:
+                    occupied_pids.add(mt.pid)
+
+            # Find empty slots
+            empty_mts = [mt for mt in year_mts if mt.pid not in occupied_pids]
+            if not empty_mts:
+                continue
+
+            # Build instructor availability across ALL genes (cross-year)
+            inst_dt_busy = defaultdict(set)
+            inst_day_hrs = defaultdict(int)
+            inst_week_hrs = defaultdict(int)
+            for g in genes:
+                if g.instructor and isinstance(g.instructor, Instructor):
+                    for mt in g.meeting_times:
+                        inst_dt_busy[g.instructor.id].add((mt.day, mt.time))
+                        inst_day_hrs[(g.instructor.id, mt.day)] += 1
+                    inst_week_hrs[g.instructor.id] += len(g.meeting_times)
+
+            # Get courses for this section that could fill gaps (theory + elective)
+            sec_cias = [cia for cia in d.cias_for_year(year_id)
+                        if cia.section_number == sec and cia.course.course_type in ('THEORY', 'ELECTIVE')]
+
+            for mt in empty_mts:
+                random.shuffle(sec_cias)
+                filled = False
+                # Pass 1: respect daily + weekly workload limits
+                for cia in sec_cias:
+                    for inst in cia._cached_insts:
+                        if (mt.day, mt.time) in inst_dt_busy[inst.id]:
+                            continue
+                        if inst_day_hrs[(inst.id, mt.day)] >= MAX_HOURS_PER_DAY:
+                            continue
+                        if inst_week_hrs[inst.id] >= MAX_HOURS_PER_WEEK:
+                            continue
+                        genes.append(Gene(year_id, sec, cia.course, [mt], inst))
+                        inst_dt_busy[inst.id].add((mt.day, mt.time))
+                        inst_day_hrs[(inst.id, mt.day)] += 1
+                        inst_week_hrs[inst.id] += 1
+                        occupied_pids.add(mt.pid)
+                        filled = True
+                        break
+                    if filled:
+                        break
+                if filled:
+                    continue
+                # Pass 2: relax daily limit — only require instructor not double-booked
+                for cia in sec_cias:
+                    for inst in cia._cached_insts:
+                        if (mt.day, mt.time) in inst_dt_busy[inst.id]:
+                            continue
+                        if inst_week_hrs[inst.id] >= MAX_HOURS_PER_WEEK:
+                            continue
+                        genes.append(Gene(year_id, sec, cia.course, [mt], inst))
+                        inst_dt_busy[inst.id].add((mt.day, mt.time))
+                        inst_day_hrs[(inst.id, mt.day)] += 1
+                        inst_week_hrs[inst.id] += 1
+                        occupied_pids.add(mt.pid)
+                        filled = True
+                        break
+                    if filled:
+                        break
+                if filled:
+                    continue
+                # Pass 3: last resort — any instructor who is free at this slot
+                all_insts = list(d._instructors)
+                random.shuffle(all_insts)
+                pick_cia = random.choice(sec_cias) if sec_cias else None
+                if pick_cia:
+                    for inst in all_insts:
+                        if (mt.day, mt.time) in inst_dt_busy[inst.id]:
+                            continue
+                        genes.append(Gene(year_id, sec, pick_cia.course, [mt], inst))
+                        inst_dt_busy[inst.id].add((mt.day, mt.time))
+                        inst_day_hrs[(inst.id, mt.day)] += 1
+                        inst_week_hrs[inst.id] += 1
+                        occupied_pids.add(mt.pid)
+                        filled = True
+                        break
+
+    schedule.invalidate()
+    return schedule
+
+
+# ── Lab evaluator assignment ─────────────────────────────────────────────────
+def _assign_lab_evaluators(schedule):
+    """Assign 1-2 assistant professor evaluators to each lab gene based on availability."""
+    d = _data
+    assistant_profs = d.assistant_profs()
+    if not assistant_profs:
+        return schedule
+
+    # Build instructor busy map across all genes
+    inst_dt_busy = defaultdict(set)
+    inst_day_hrs = defaultdict(int)
+    inst_week_hrs = defaultdict(int)
+    for g in schedule.genes():
+        if g.instructor and isinstance(g.instructor, Instructor):
+            for mt in g.meeting_times:
+                inst_dt_busy[g.instructor.id].add((mt.day, mt.time))
+                inst_day_hrs[(g.instructor.id, mt.day)] += 1
+            inst_week_hrs[g.instructor.id] += len(g.meeting_times)
+
+    for g in schedule.genes():
+        if g.course.course_type != 'LAB':
+            continue
+
+        main_inst_id = g.instructor.id if g.instructor else None
+        evaluators = []
+
+        lab_slots = [(mt.day, mt.time) for mt in g.meeting_times]
+        lab_days = set(mt.day for mt in g.meeting_times)
+        lab_hours = len(g.meeting_times)
+
+        candidates = list(assistant_profs)
+        random.shuffle(candidates)
+
+        for ap in candidates:
+            if ap.id == main_inst_id:
+                continue
+            if any((day, time) in inst_dt_busy[ap.id] for day, time in lab_slots):
+                continue
+            ok = True
+            for day in lab_days:
+                day_add = sum(1 for d_, t_ in lab_slots if d_ == day)
+                # Allow lab that exceeds daily limit on its own (e.g. 4-hr lab)
+                effective_limit = max(MAX_HOURS_PER_DAY, day_add)
+                if inst_day_hrs[(ap.id, day)] + day_add > effective_limit:
+                    ok = False
+                    break
+            if not ok:
+                continue
+            if inst_week_hrs[ap.id] + lab_hours > MAX_HOURS_PER_WEEK:
+                continue
+
+            evaluators.append(ap)
+            for day, time in lab_slots:
+                inst_dt_busy[ap.id].add((day, time))
+                inst_day_hrs[(ap.id, day)] += 1
+            inst_week_hrs[ap.id] += lab_hours
+
+            if len(evaluators) >= 2:
+                break
+
+        g.evaluators = evaluators
+
+    return schedule
+
+
 # ── Persistence ───────────────────────────────────────────────────────────────
 def _save_timetable(schedule, gen):
     d = _data
+    # Delete ALL old timetables (keep only the latest generation)
+    GeneratedTimetable.objects.all().delete()
+
     for year in d.years():
-        tt, _ = GeneratedTimetable.objects.update_or_create(
+        tt = GeneratedTimetable.objects.create(
             year=year,
-            defaults={'fitness_score': schedule.getFitness(),
-                      'generation_count': gen}
+            fitness_score=schedule.getFitness(),
+            generation_count=gen,
         )
-        TimetableEntry.objects.filter(timetable=tt).delete()
         for g in schedule.genes():
             if g.year_id != year.id:
                 continue
             if g.is_special:
-                continue   # _PseudoCourse has no DB row; skip saving
+                continue
             inst = g.instructor if isinstance(g.instructor, Instructor) else None
             for mt in g.meeting_times:
-                TimetableEntry.objects.create(
+                entry = TimetableEntry.objects.create(
                     timetable=tt, year=year,
                     section_number=g.section,
                     course_id=g.course.course_number,
                     instructor=inst, lab_room=g.lab_room,
                     meeting_time=mt, batch=g.batch,
                 )
+                if g.evaluators:
+                    entry.evaluators.set(g.evaluators)
 
 
 def _log_penalty_breakdown(schedule):
@@ -935,8 +1181,20 @@ def _log_penalty_breakdown(schedule):
                 actual = chours[key]
                 if actual < req:
                     h7 += P_HARD * (req - actual)
-    logger.info("Penalty breakdown: H1=%d H2=%d H3=%d H4=%d H5=%d H6=%d H7=%d",
-                h1, h2, h3, h4, h5, h6, h7)
+    # H8 – daily overload
+    inst_day_h = defaultdict(int)
+    for g in genes:
+        if g.instructor and isinstance(g.instructor, Instructor):
+            for mt in g.meeting_times:
+                inst_day_h[(g.instructor.id, mt.day)] += 1
+    h8 = sum(P_HARD * (c - MAX_HOURS_PER_DAY) for c in inst_day_h.values() if c > MAX_HOURS_PER_DAY)
+    # H9 – weekly overload
+    inst_week_h = defaultdict(int)
+    for (iid, _), c in inst_day_h.items():
+        inst_week_h[iid] += c
+    h9 = sum(P_HARD * (c - MAX_HOURS_PER_WEEK) for c in inst_week_h.values() if c > MAX_HOURS_PER_WEEK)
+    logger.info("Penalty breakdown: H1=%d H2=%d H3=%d H4=%d H5=%d H6=%d H7=%d H8=%d H9=%d",
+                h1, h2, h3, h4, h5, h6, h7, h8, h9)
 
 
 # ── Main timetable view ───────────────────────────────────────────────────────
@@ -1000,6 +1258,11 @@ def timetable(request):
                         best.getNumbOfConflicts())
 
     best.local_search_repair(full=True)
+
+    # Post-processing: fill gaps, assign lab evaluators
+    _fill_gaps(best)
+    _assign_lab_evaluators(best)
+
     logger.info("DONE Gen %d | fitness %.4f | penalty %d",
                 VARS['generationNum'], best.getFitness(), best.getNumbOfConflicts())
     _log_penalty_breakdown(best)
@@ -1029,12 +1292,14 @@ def _build_context(schedule):
                 for mt in g.meeting_times:
                     inst_name = (g.instructor.name
                                  if isinstance(g.instructor, Instructor) else '')
+                    eval_names = ', '.join(e.name for e in (g.evaluators or []))
                     entries.append({
                         'day':         mt.day,
                         'time':        mt.time,
                         'course_name': g.course.course_name,
                         'course_type': g.course.course_type,
                         'instructor':  inst_name,
+                        'evaluators':  eval_names,
                         'lab_room':    g.lab_room.lab_name if g.lab_room else '',
                         'batch':       g.batch,
                         'is_special':  g.is_special,
@@ -1048,14 +1313,13 @@ def _build_context(schedule):
 @login_required
 def instructor_timetable(request):
     all_entries = TimetableEntry.objects.select_related(
-        'course', 'instructor', 'meeting_time', 'year', 'lab_room').all()
+        'course', 'instructor', 'meeting_time', 'year', 'lab_room'
+    ).prefetch_related('evaluators').all()
 
-    # Build per-instructor data: list of {instructor, entries:[{day,time,course_name,...}]}
+    # Build per-instructor data including evaluator slots
     inst_map = {}   # instructor.id → {instructor: obj, entries: [...]}
-    for e in all_entries:
-        if not e.instructor:
-            continue
-        inst = e.instructor
+
+    def _add_entry(inst, e, role=''):
         if inst.id not in inst_map:
             inst_map[inst.id] = {'instructor': inst, 'entries': []}
         inst_map[inst.id]['entries'].append({
@@ -1066,7 +1330,16 @@ def instructor_timetable(request):
             'year':        e.year.year_name,
             'section':     e.section_number,
             'lab_room':    e.lab_room.lab_name if e.lab_room else '',
+            'role':        role,
         })
+
+    for e in all_entries:
+        # Main instructor
+        if e.instructor:
+            _add_entry(e.instructor, e, role='')
+        # Evaluators (lab only)
+        for ev in e.evaluators.all():
+            _add_entry(ev, e, role='Evaluator')
 
     # Group entries by day for each instructor
     day_order = [d[0] for d in DAYS_OF_WEEK]
@@ -1090,6 +1363,65 @@ def instructor_timetable(request):
         'instructors_data': instructors_data,
         'timeSlots':        TIME_SLOTS,
         'weekDays':         DAYS_OF_WEEK,
+    })
+
+
+@login_required
+def view_timetable(request):
+    """View the latest stored timetable without regenerating."""
+    timetables = GeneratedTimetable.objects.select_related('year').order_by('-generated_at')
+    if not timetables.exists():
+        return render(request, 'view_timetable.html', {
+            'years_data': [],
+            'sections':   [1, 2, 3],
+            'timeSlots':  TIME_SLOTS,
+            'weekDays':   DAYS_OF_WEEK,
+            'fitness':    0,
+            'generations': 0,
+            'no_timetable': True,
+        })
+
+    # Build context from stored entries
+    years_data = []
+    fitness = 0
+    generations = 0
+    for tt in timetables:
+        fitness = max(fitness, tt.fitness_score)
+        generations = max(generations, tt.generation_count)
+        entries_qs = TimetableEntry.objects.filter(timetable=tt).select_related(
+            'course', 'instructor', 'meeting_time', 'lab_room'
+        ).prefetch_related('evaluators')
+
+        year_secs = []
+        for sec in (1, 2, 3):
+            entries = []
+            for e in entries_qs.filter(section_number=sec):
+                eval_names = ', '.join(ev.name for ev in e.evaluators.all())
+                entries.append({
+                    'day':         e.meeting_time.day,
+                    'time':        e.meeting_time.time,
+                    'course_name': e.course.course_name,
+                    'course_type': e.course.course_type,
+                    'instructor':  e.instructor.name if e.instructor else '',
+                    'evaluators':  eval_names,
+                    'lab_room':    e.lab_room.lab_name if e.lab_room else '',
+                    'batch':       e.batch,
+                    'is_special':  False,
+                })
+            year_secs.append({'section': sec, 'entries': entries})
+
+        years_data.append({
+            'year': tt.year,
+            'sections': year_secs,
+        })
+
+    return render(request, 'view_timetable.html', {
+        'years_data':  years_data,
+        'sections':    [1, 2, 3],
+        'timeSlots':   TIME_SLOTS,
+        'weekDays':    DAYS_OF_WEEK,
+        'fitness':     round(fitness, 4),
+        'generations': generations,
     })
 
 

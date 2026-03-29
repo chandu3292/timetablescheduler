@@ -23,6 +23,7 @@
         <div class="crdbtn">
           <a href="{% url 'timetable' %}" id='genButton' class="btn" onclick='document.getElementById("loaderClass").style.display="inline-block"'>Generate Timetable</a>
           {% if user.is_authenticated %}
+          <a href="{% url 'view_timetable' %}" class="btn" style="margin-left:10px;background:#2c3e50;">View Timetable</a>
           <div id="loaderClass" class="loaderClass">
             <span class="loaderClassValue">0</span>
             <svg class="loader" width="40" height="40">

@@ -33,10 +33,18 @@ SPECIAL_PERIOD_TYPES = (
     ('Sports/Library', 'Sports/Library'),
 )
 
+DESIGNATION_CHOICES = (
+    ('Professor',           'Professor'),
+    ('Associate Professor', 'Associate Professor'),
+    ('Assistant Professor', 'Assistant Professor'),
+)
+
 
 class Instructor(models.Model):
-    uid  = models.CharField(max_length=10)
-    name = models.CharField(max_length=50)
+    uid         = models.CharField(max_length=10)
+    name        = models.CharField(max_length=50)
+    designation = models.CharField(max_length=25, choices=DESIGNATION_CHOICES,
+                                   default='Assistant Professor')
 
     def __str__(self):
         return f'{self.uid} {self.name}'
@@ -132,10 +140,13 @@ class SpecialPeriod(models.Model):
 
 
 class GeneratedTimetable(models.Model):
-    year            = models.OneToOneField(Year, on_delete=models.CASCADE)
+    year            = models.ForeignKey(Year, on_delete=models.CASCADE)
     generated_at    = models.DateTimeField(auto_now=True)
     fitness_score   = models.FloatField(default=0.0)
     generation_count = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['-generated_at']
 
     def __str__(self):
         return f'Timetable for {self.year} (fitness={self.fitness_score:.4f})'
@@ -149,12 +160,16 @@ class TimetableEntry(models.Model):
     section_number = models.IntegerField(default=1)
     course         = models.ForeignKey(Course, on_delete=models.CASCADE)
     instructor     = models.ForeignKey(Instructor, on_delete=models.SET_NULL,
-                         null=True, blank=True)
+                         null=True, blank=True,
+                         related_name='timetable_entries')
     lab_room       = models.ForeignKey(LabRoom, on_delete=models.SET_NULL,
                          null=True, blank=True)
     meeting_time   = models.ForeignKey(MeetingTime, on_delete=models.CASCADE)
     batch          = models.CharField(max_length=10, default='FULL',
                          help_text="FULL | B1 | B2 ...")
+    evaluators     = models.ManyToManyField(Instructor, blank=True,
+                         related_name='evaluator_entries',
+                         help_text='Lab evaluators (Assistant Professors only)')
 
     def __str__(self):
         return (f'{self.year} S{self.section_number} {self.course} '

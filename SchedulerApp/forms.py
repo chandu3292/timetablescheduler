@@ -22,8 +22,9 @@ class UserLoginForm(AuthenticationForm):
 class InstructorForm(ModelForm):
     class Meta:
         model = Instructor
-        labels = {'uid': 'Instructor ID', 'name': 'Instructor Name'}
-        fields = ['uid', 'name']
+        labels = {'uid': 'Instructor ID', 'name': 'Instructor Name',
+                  'designation': 'Designation'}
+        fields = ['uid', 'name', 'designation']
 
 
 class LabRoomForm(ModelForm):

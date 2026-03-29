@@ -3,217 +3,94 @@
 {% load static %}
 
 <style>
-  /* ── Page header ── */
   .tt-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
   }
-  .tt-header h2 {
-    margin: 0;
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: #1a1a2e;
-  }
+  .tt-header h2 { margin: 0; font-size: 1.6rem; font-weight: 700; color: #1a1a2e; }
   .tt-header .badge-fitness {
-    background: #27ae60;
-    color: #fff;
-    border-radius: 20px;
-    padding: 6px 16px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    background: #27ae60; color: #fff; border-radius: 20px;
+    padding: 6px 16px; font-size: 0.9rem; font-weight: 600;
   }
-
-  /* ── Year pills ── */
-  .year-tabs {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-  }
+  .year-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
   .year-tab-btn {
-    padding: 8px 22px;
-    border: 2px solid #1abc9c;
-    border-radius: 25px;
-    background: #fff;
-    color: #1abc9c;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.9rem;
+    padding: 8px 22px; border: 2px solid #1abc9c; border-radius: 25px;
+    background: #fff; color: #1abc9c; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; font-size: 0.9rem;
   }
-  .year-tab-btn.active,
-  .year-tab-btn:hover {
-    background: #1abc9c;
-    color: #fff;
-  }
-
-  /* ── Section tabs ── */
-  .section-tabs {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 16px;
-  }
+  .year-tab-btn.active, .year-tab-btn:hover { background: #1abc9c; color: #fff; }
+  .section-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
   .sec-tab-btn {
-    padding: 6px 18px;
-    border: 2px solid #3498db;
-    border-radius: 20px;
-    background: #fff;
-    color: #3498db;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.85rem;
+    padding: 6px 18px; border: 2px solid #3498db; border-radius: 20px;
+    background: #fff; color: #3498db; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; font-size: 0.85rem;
   }
-  .sec-tab-btn.active,
-  .sec-tab-btn:hover {
-    background: #3498db;
-    color: #fff;
-  }
-
-  /* ── Timetable ── */
-  .tt-wrapper {
-    overflow-x: auto;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  }
-  table.tt {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 700px;
-    background: #fff;
-  }
+  .sec-tab-btn.active, .sec-tab-btn:hover { background: #3498db; color: #fff; }
+  .tt-wrapper { overflow-x: auto; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  table.tt { width: 100%; border-collapse: collapse; min-width: 700px; background: #fff; }
   table.tt thead th {
-    background: #1a1a2e;
-    color: #fff;
-    padding: 10px 8px;
-    text-align: center;
-    font-size: 0.8rem;
-    font-weight: 600;
-    white-space: nowrap;
-    border: 1px solid #2c2c54;
+    background: #1a1a2e; color: #fff; padding: 10px 8px; text-align: center;
+    font-size: 0.8rem; font-weight: 600; white-space: nowrap; border: 1px solid #2c2c54;
   }
-  table.tt thead th:first-child {
-    width: 90px;
-    background: #16213e;
-  }
+  table.tt thead th:first-child { width: 90px; background: #16213e; }
   table.tt tbody th {
-    background: #16213e;
-    color: #fff;
-    font-size: 0.82rem;
-    font-weight: 600;
-    text-align: center;
-    padding: 8px 6px;
-    border: 1px solid #2c2c54;
-    white-space: nowrap;
+    background: #16213e; color: #fff; font-size: 0.82rem; font-weight: 600;
+    text-align: center; padding: 8px 6px; border: 1px solid #2c2c54; white-space: nowrap;
   }
   table.tt tbody td {
-    border: 1px solid #e0e0e0;
-    padding: 6px 7px;
-    vertical-align: top;
-    min-width: 110px;
-    max-width: 150px;
-    background: #fafafa;
-    transition: background 0.15s;
+    border: 1px solid #e0e0e0; padding: 6px 7px; vertical-align: top;
+    min-width: 110px; max-width: 150px; background: #fafafa; transition: background 0.15s;
   }
-  table.tt tbody td:empty,
-  table.tt tbody td .tt-cell:empty { background: #f5f5f5; }
   table.tt tbody tr:hover td { background: #f0f8ff; }
-
-  /* ── Cell cards ── */
-  .tt-cell {
-    font-size: 0.78rem;
-    line-height: 1.35;
-  }
-  .cell-name {
-    font-weight: 700;
-    color: #1a1a2e;
-    display: block;
-    margin-bottom: 2px;
-  }
+  .tt-cell { font-size: 0.78rem; line-height: 1.35; }
+  .cell-name { font-weight: 700; color: #1a1a2e; display: block; margin-bottom: 2px; }
   .cell-badge {
-    display: inline-block;
-    font-size: 0.68rem;
-    font-weight: 700;
-    border-radius: 4px;
-    padding: 1px 5px;
-    margin-bottom: 3px;
-    letter-spacing: 0.3px;
+    display: inline-block; font-size: 0.68rem; font-weight: 700;
+    border-radius: 4px; padding: 1px 5px; margin-bottom: 3px; letter-spacing: 0.3px;
   }
   .badge-lab      { background: #d6eaf8; color: #1a5276; }
   .badge-elective { background: #d5f5e3; color: #1e8449; }
   .badge-special  { background: #f5d6f8; color: #6c3483; }
   .badge-theory   { background: #fdebd0; color: #784212; }
-  .cell-inst {
-    color: #555;
-    font-size: 0.72rem;
-    display: block;
-  }
-  .cell-eval {
-    color: #2980b9;
-    font-size: 0.70rem;
-    display: block;
-    font-weight: 600;
-  }
-  .cell-room {
-    color: #888;
-    font-size: 0.68rem;
-    display: block;
-    font-style: italic;
-  }
-
-  /* ── Instructor view btn ── */
+  .cell-inst { color: #555; font-size: 0.72rem; display: block; }
+  .cell-eval { color: #2980b9; font-size: 0.70rem; display: block; font-weight: 600; }
+  .cell-room { color: #888; font-size: 0.68rem; display: block; font-style: italic; }
   .btn-inst-view {
-    background: #2c3e50;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 18px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    background: #2c3e50; color: #fff; border: none; border-radius: 8px;
+    padding: 8px 18px; font-size: 0.88rem; font-weight: 600;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
     transition: background 0.2s;
   }
   .btn-inst-view:hover { background: #1abc9c; color: #fff; text-decoration: none; }
-
-  /* ── Legend ── */
-  .tt-legend {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 18px;
-    font-size: 0.8rem;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .legend-dot {
-    width: 12px; height: 12px;
-    border-radius: 3px;
-    display: inline-block;
-  }
-
-  /* hidden panels */
+  .tt-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; font-size: 0.8rem; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
   .year-panel  { display: none; }
   .year-panel.active  { display: block; }
   .sec-panel   { display: none; }
   .sec-panel.active   { display: block; }
 </style>
 
+{% if no_timetable %}
+<div style="text-align:center;padding:60px;color:#888;">
+  <i class="fa fa-calendar-o" style="font-size:3rem;color:#ccc;"></i>
+  <h3 style="margin-top:16px;">No timetable generated yet</h3>
+  <p>Generate a timetable first, then come back here to view it.</p>
+  <a href="{% url 'timetable' %}" class="btn-inst-view" style="margin-top:12px;">
+    <i class="fa fa-cog"></i> Generate Timetable
+  </a>
+</div>
+{% else %}
+
 <!-- Header -->
 <div class="tt-header">
-  <h2><i class="fa fa-calendar"></i> &nbsp;Generated Timetable</h2>
-  <a href="{% url 'instructor_timetable' %}" class="btn-inst-view">
-    <i class="fa fa-user"></i> Instructor View
-  </a>
+  <h2><i class="fa fa-calendar"></i> &nbsp;Stored Timetable</h2>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <span class="badge-fitness">Fitness: {{ fitness }}</span>
+    <a href="{% url 'instructor_timetable' %}" class="btn-inst-view">
+      <i class="fa fa-user"></i> Instructor View
+    </a>
+  </div>
 </div>
 
 <!-- Legend -->
@@ -238,7 +115,6 @@
 {% for year_data in years_data %}
 <div class="year-panel {% if forloop.first %}active{% endif %}" id="year{{ forloop.counter }}">
 
-  <!-- Section Tabs -->
   <div class="section-tabs" id="secTabs{{ forloop.counter }}">
     {% for sec_data in year_data.sections %}
     {% if sec_data.entries %}
@@ -250,7 +126,6 @@
     {% endfor %}
   </div>
 
-  <!-- Section Panels -->
   {% for sec_data in year_data.sections %}
   {% if sec_data.entries %}
   <div class="sec-panel {% if forloop.first %}active{% endif %}"
@@ -327,4 +202,5 @@ function switchSec(yearId, secId, btn) {
 }
 </script>
 
+{% endif %}
 {% endblock %}

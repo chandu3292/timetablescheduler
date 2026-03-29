@@ -230,6 +230,7 @@ table.tt tbody tr:hover td { background:#f7fbff; }
                   {% if entry.course_type == 'LAB' %}<span class="cbadge b-lab">Lab</span>
                   {% elif entry.course_type == 'ELECTIVE' %}<span class="cbadge b-elective">Elective</span>
                   {% else %}<span class="cbadge b-theory">Theory</span>{% endif %}
+                  {% if entry.role %}<span class="cbadge" style="background:#e8d5f5;color:#6c3483;">{{ entry.role }}</span>{% endif %}
                   <span class="cmeta">{{ entry.year }} · Sec {{ entry.section }}</span>
                   {% if entry.lab_room %}<span class="croom"><i class="fa fa-map-marker"></i> {{ entry.lab_room }}</span>{% endif %}
                 </div>
