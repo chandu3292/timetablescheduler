@@ -31,6 +31,85 @@
 .status-not-exists {
     color: #ff9800;
 }
+.generate-all-btn {
+    background: linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 20px;
+}
+.generate-all-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+.generate-all-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+.spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #ffffff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.result-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+.result-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.result-item {
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    background-color: #f0f0f0;
+}
+.result-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+.result-error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.close-modal {
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+}
+.close-modal:hover {
+    color: #000;
+}
 </style>
 
 <h2 style="text-align: center; margin: 30px 0;">Select Year to View/Generate Timetable</h2>
@@ -49,8 +128,123 @@
 {% endfor %}
 </div>
 
-<div style="text-align: center; margin-top: 40px;">
+<div style="text-align: center; margin-top: 30px;">
+    <button onclick="confirmGenerateAll()" class="generate-all-btn" id="generateAllBtn">
+        🚀 Generate All Years
+    </button>
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
     <a href="{% url 'home' %}" class="btn">Back to Home</a>
 </div>
+
+<!-- Result Modal -->
+<div id="resultModal" class="result-modal">
+    <div class="result-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h3 id="modalTitle">Generation Results</h3>
+        <div id="modalBody"></div>
+        <button onclick="location.reload()" class="btn" style="margin-top: 20px;">Refresh Page</button>
+    </div>
+</div>
+
+<script>
+function confirmGenerateAll() {
+    if (confirm('This will regenerate timetables for all years. This may take a few moments. Continue?')) {
+        generateAllYears();
+    }
+}
+
+function generateAllYears() {
+    const btn = document.getElementById('generateAllBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Generating...';
+    
+    fetch('{% url "generate_all_years" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(async response => {
+        const contentType = response.headers.get('content-type') || '';
+
+        if (!contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Server returned non-JSON response (status ${response.status}). ${text.slice(0, 120)}`);
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || `Request failed with status ${response.status}`);
+        }
+
+        return data;
+    })
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '🚀 Generate All Years';
+        showResults(data);
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = '🚀 Generate All Years';
+        alert('Error generating timetables: ' + error);
+    });
+}
+
+function showResults(data) {
+    const modal = document.getElementById('resultModal');
+    const modalBody = document.getElementById('modalBody');
+    const modalTitle = document.getElementById('modalTitle');
+    
+    modalTitle.innerHTML = `Generation Complete: ${data.success}/${data.total} Successful`;
+    
+    let html = '';
+    data.results.forEach(result => {
+        if (result.success) {
+            html += `<div class="result-item result-success">
+                ✓ <strong>${result.year}</strong>: ${result.classes} classes, ${result.conflicts} conflicts, ${result.fitness} fitness
+            </div>`;
+        } else {
+            html += `<div class="result-item result-error">
+                ✗ <strong>${result.year}</strong>: ${result.error}
+            </div>`;
+        }
+    });
+    
+    modalBody.innerHTML = html;
+    modal.style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('resultModal').style.display = 'none';
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('resultModal');
+    if (event.target == modal) {
+        closeModal();
+    }
+}
+</script>
 
 {% endblock %}

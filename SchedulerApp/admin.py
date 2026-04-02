@@ -1,16 +1,29 @@
 from django.contrib import admin
 from .models import *
-from .models import CourseInstructorAssignment, GeneratedTimetable, TimetableEntry, LabBatchAssignment
+from .models import CourseInstructorAssignment, GeneratedTimetable, TimetableEntry
+
+@admin.register(Instructor)
+class InstructorAdmin(admin.ModelAdmin):
+    list_display = ['uid', 'name', 'email', 'designation', 'department']
+    list_filter = ['designation', 'department']
+    search_fields = ['uid', 'name', 'email']
+    list_editable = ['designation', 'department']
+
+@admin.register(InstructorPriority)
+class InstructorPriorityAdmin(admin.ModelAdmin):
+    list_display = ['instructor', 'day', 'period_1_priority', 'period_2_priority', 'period_3_priority', 
+                    'period_4_priority', 'period_5_priority', 'period_6_priority', 'period_7_priority']
+    list_filter = ['day', 'instructor']
+    search_fields = ['instructor__name']
 
 admin.site.register(LabRoom)
-admin.site.register(Instructor)
 admin.site.register(MeetingTime)
 
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('course_number', 'course_name', 'course_type', 'split_into_batches', 'hours_per_week', 'priority')
-    list_filter = ('course_type', 'split_into_batches')
+    list_display = ('course_number', 'course_name', 'course_type', 'hours_per_week', 'priority')
+    list_filter = ('course_type',)
     search_fields = ('course_number', 'course_name')
-    list_editable = ('split_into_batches',)
+    list_editable = ()
     
     fieldsets = (
         ('Basic Information', {
@@ -18,10 +31,6 @@ class CourseAdmin(admin.ModelAdmin):
         }),
         ('Scheduling Configuration', {
             'fields': ('hours_per_week', 'max_continuous_hours', 'priority'),
-        }),
-        ('Batch Splitting', {
-            'fields': ('split_into_batches',),
-            'description': '✅ Check this box for labs that split sections into Batch 1 (B1) and Batch 2 (B2) with rotation. After checking this, you can create Lab Batch Assignments to define which batch gets which instructor/lab for each session.'
         }),
         ('Lab Resources (for LAB courses only)', {
             'fields': ('lab_rooms',),
@@ -65,42 +74,32 @@ class SpecialPeriodAdmin(admin.ModelAdmin):
         form.base_fields['continuous_hours'].initial = 1
         return form
 
+
+class YearAdmin(admin.ModelAdmin):
+    list_display = ('year_name', 'get_lunch_time', 'get_period_count')
+    fields = ('year_name', 'lunch_period', 'courses')
+    
+    def get_lunch_time(self, obj):
+        time_slots = [
+            '8:45-9:45', '9:45-10:35', '10:35-11:25', '11:25-12:15',
+            '12:15-1:05', '1:05-1:55', '1:55-2:45', '2:45-3:35'
+        ]
+        if 1 <= obj.lunch_period <= len(time_slots):
+            return f"Period {obj.lunch_period}: {time_slots[obj.lunch_period-1]}"
+        return "Not set"
+    get_lunch_time.short_description = 'Lunch Break'
+    
+    def get_period_count(self, obj):
+        return "7 periods"
+    get_period_count.short_description = 'Class Periods'
+
+
 admin.site.register(Course, CourseAdmin)
 admin.site.register(Department)
-admin.site.register(Year)
+admin.site.register(Year, YearAdmin)
 admin.site.register(CourseInstructorAssignment)
 admin.site.register(GeneratedTimetable)
 admin.site.register(TimetableEntry)
 admin.site.register(SpecialPeriod, SpecialPeriodAdmin)
 
 
-class LabBatchAssignmentAdmin(admin.ModelAdmin):
-    list_display = ('year', 'section_number', 'course', 'batch', 'session_number', 'get_instructors', 'lab_room', 'paired_course')
-    list_filter = ('year', 'section_number', 'batch', 'session_number')
-    search_fields = ('course__course_name', 'instructors__name', 'lab_room__lab_name')
-    ordering = ('year', 'section_number', 'course', 'session_number', 'batch')
-    
-    fieldsets = (
-        ('Assignment Details', {
-            'fields': ('year', 'section_number', 'course', 'batch', 'session_number'),
-            'description': 'Define which batch gets which resources for each session. The scheduler will automatically find available time slots.'
-        }),
-        ('Resources', {
-            'fields': ('instructors', 'lab_room'),
-            'description': 'Select one or more instructors for this batch in this session'
-        }),
-        ('Pairing (Optional)', {
-            'fields': ('paired_course',),
-            'description': 'The other lab that runs simultaneously (e.g., IoT pairs with Cryptography)'
-        }),
-    )
-    
-    def get_instructors(self, obj):
-        return ", ".join([inst.name for inst in obj.instructors.all()])
-    get_instructors.short_description = 'Instructors'
-    
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.select_related('year', 'course', 'lab_room', 'paired_course').prefetch_related('instructors')
-
-admin.site.register(LabBatchAssignment, LabBatchAssignmentAdmin)

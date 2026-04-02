@@ -1,7 +1,9 @@
-from django.http.response import HttpResponse
+﻿from django.http.response import HttpResponse
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
 from .models import *
 from .forms import *
 from .models import TIME_SLOTS, DAYS_OF_WEEK
@@ -12,19 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # CONSTRAINT-BASED SCHEDULING PARAMETERS (NO MORE GA!)
-MAX_ATTEMPTS = 10  # Try building schedule up to 10 times if needed
-VARS = {'generationNum': 0,
-        'terminateGens': False}
-
-
-class Population:
-    def __init__(self, size):
-        self._size = size
-        self._data = data
-        self._schedules = [Schedule().initialize() for i in range(size)]
-
-    def getSchedules(self):
-        return self._schedules
+MAX_ATTEMPTS = 30  # Try more times to find a fully feasible schedule
 
 
 class Data:
@@ -67,14 +57,13 @@ class Data:
 
 
 class Class:
-    def __init__(self, year, section_number, course, batch='FULL', is_evaluator=False):
+    def __init__(self, year, section_number, course, is_evaluator=False):
         self.year = year
         self.course = course
         self.instructor = None
         self.meeting_time = None
         self.room = None
         self.section_number = section_number
-        self.batch = batch  # B1, B2, or FULL (for non-split courses)
         self.is_evaluator = is_evaluator  # True if this instructor is an evaluator, False if main instructor
 
     def get_id(self):
@@ -114,8 +103,6 @@ class Schedule:
         self._fitness = -1
         self._isFitnessChanged = True
         self.course_day_tracker = {} 
-        
-
 
     def getClasses(self):
         self._isFitnessChanged = True
@@ -130,525 +117,9 @@ class Schedule:
             self._isFitnessChanged = False
         return self._fitness
 
-    def addCourse(self, data, course, courses, year, section_number):
-
-        newClass = Class(year, section_number, course, batch='FULL')
-
-        meeting_times = list(data.get_meetingTimes())
-
-        # --- DISTRIBUTE ACROSS WEEK for full timetable coverage ---
-        # Try to spread classes across different days to fill the timetable evenly
-        used_days = self.course_day_tracker.get((section_number, course.course_number), set())
-        
-        # Prefer NEW days to distribute workload across the week
-        if used_days:
-            # 70% chance to prefer NEW days (better distribution)
-            # 30% chance to allow same day (if needed)
-            if random.random() < 0.7:
-                # Prefer days NOT yet used for this course
-                all_days = set(mt.day for mt in meeting_times)
-                unused_days = all_days - used_days
-                if unused_days:
-                    preferred_mt = [mt for mt in meeting_times if mt.day in unused_days]
-                    available_mt = preferred_mt if preferred_mt else meeting_times
-                else:
-                    available_mt = meeting_times
-            else:
-                available_mt = meeting_times
-        else:
-            available_mt = meeting_times
-
-        # NOTE: No section-busy filtering - GA handles conflicts through evolution
-        
-        # ELECTIVE → same time for all sections (MUST use pre-allocated time)
-        if course.course_type == 'ELECTIVE':
-            single_key = f"{course.course_number}_single"
-            index_key = f"{course.course_number}_single_index"
-            
-            if single_key in data.elective_time_tracker:
-                # Get the list of pre-allocated times
-                time_list = data.elective_time_tracker[single_key]
-                
-                # Get or initialize the index for this section
-                if index_key not in data.elective_time_tracker:
-                    data.elective_time_tracker[index_key] = {}
-                
-                if section_number not in data.elective_time_tracker[index_key]:
-                    data.elective_time_tracker[index_key][section_number] = 0
-                
-                # Get the current index for this section
-                idx = data.elective_time_tracker[index_key][section_number]
-                
-                if isinstance(time_list, list) and len(time_list) > 0:
-                    # Use modulo to cycle through times (prevents out of range error)
-                    selected_mt = time_list[idx % len(time_list)]
-                    # Increment index for next call
-                    data.elective_time_tracker[index_key][section_number] += 1
-                else:
-                    selected_mt = random.choice(meeting_times)  # Fallback
-            else:
-                # Fallback if pre-allocation didn't work
-                selected_mt = random.choice(meeting_times)
-        else:
-            # LIGHT EARLY-BIASED SELECTION: Prefer distributing across all slots
-            # 30% chance to use early bias, 70% pure random for better distribution
-            if available_mt and random.random() < 0.3:
-                slot_order = [t[0] for t in TIME_SLOTS]
-                available_mt_sorted = sorted(available_mt, 
-                                            key=lambda mt: slot_order.index(mt.time) if mt.time in slot_order else 999)
-                
-                # Gentle weights: early slots 2-3x more likely than late slots (not 8x)
-                n = len(available_mt_sorted)
-                if n > 1:
-                    # Linear decay instead of exponential - much gentler
-                    weights = [1.0 + (n - i) / n for i in range(n)]  # Range: 2.0 to 1.0
-                    selected_mt = random.choices(available_mt_sorted, weights=weights, k=1)[0]
-                elif n == 1:
-                    selected_mt = available_mt_sorted[0]
-                else:
-                    selected_mt = random.choice(meeting_times) if meeting_times else None
-            elif available_mt:
-                # Pure random selection for diversity
-                selected_mt = random.choice(available_mt)
-            else:
-                # Fallback if no available times
-                selected_mt = random.choice(meeting_times) if meeting_times else None
-        
-        if selected_mt is None:
-            return  # Skip this class - no available time slots
-
-
-        newClass.set_meetingTime(selected_mt)
-
-        # mark day used
-        used_days.add(selected_mt.day)
-        self.course_day_tracker[(section_number, course.course_number)] = used_days
-
-        # Room - For LAB courses, randomly select from assigned lab rooms
-        if course.course_type == 'LAB':
-            available_labs = list(course.lab_rooms.all())
-            if available_labs:
-                newClass.set_room(random.choice(available_labs))
-            else:
-                newClass.set_room(None)
-        else:
-            newClass.set_room(None)
-
-        # Instructor
-        assigned = CourseInstructorAssignment.objects.filter(
-            year=year,
-            section_number=section_number,
-            course=course
-        )
-
-        if assigned.exists():
-            # Get all instructors for this section, pick randomly if multiple
-            assigned_instructors = list(assigned.first().instructors.all())
-            if assigned_instructors:
-                newClass.set_instructor(random.choice(assigned_instructors))
-        else:
-        # fallback random (if not assigned)
-            crs_inst = list(course.instructors.all())
-            if crs_inst:
-                newClass.set_instructor(random.choice(crs_inst))
-        self._classes.append(newClass)
-
-    def isSectionBusy(self, section_number, meeting_time):
-        """Check if section already has a class at this time"""
-        for cls in self._classes:
-            if cls.section_number == section_number and cls.meeting_time == meeting_time:
-                return True
-        return False
-    
-    def isInstructorBusy(self, instructor, meeting_time):
-        """Check if instructor already has a class at this time"""
-        if instructor is None:
-            return False
-        for cls in self._classes:
-            if cls.instructor == instructor and cls.meeting_time == meeting_time:
-                return True
-        return False
-        
-    def addContinuousCourse(self, data, course, year, section_number):
-
-        meeting_times = list(data.get_meetingTimes())
-
-        # group by day
-        day_groups = {}
-        for mt in meeting_times:
-            day_groups.setdefault(mt.day, []).append(mt)
-
-        # sort times
-        for day in day_groups:
-            day_groups[day].sort(key=lambda x: TIME_SLOTS.index((x.time, x.time)))
-
-        valid_blocks = []
-
-        for day, times in day_groups.items():
-            for i in range(len(times) - course.max_continuous_hours + 1):
-
-                block = times[i:i + course.max_continuous_hours]
-
-                # ❌ CRITICAL: Skip blocks that include or cross lunch break
-                # Check 1: Lunch is in the block
-                if any(t.time == "12:15 - 1:05" for t in block):
-                    continue
-                
-                # Check 2: Block crosses lunch (times before 12:15 AND after 1:05)
-                slot_order = [t[0] for t in TIME_SLOTS]
-                lunch_index = slot_order.index("12:15 - 1:05") if "12:15 - 1:05" in slot_order else -1
-                
-                if lunch_index != -1:
-                    block_indices = [slot_order.index(t.time) for t in block if t.time in slot_order]
-                    if block_indices:
-                        # Check if block spans across lunch (some before, some after)
-                        has_before_lunch = any(idx < lunch_index for idx in block_indices)
-                        has_after_lunch = any(idx > lunch_index for idx in block_indices)
-                        if has_before_lunch and has_after_lunch:
-                            continue  # Block crosses lunch - skip it
-
-                # ⭐ ENHANCED: Check for conflicts to prefer conflict-free blocks
-                # Check if section or instructor is busy during this block
-                has_conflict = False
-                for mt in block:
-                    if self.isSectionBusy(section_number, mt):
-                        has_conflict = True
-                        break
-                    # Check instructor conflict (need to get instructor first)
-                    assigned = CourseInstructorAssignment.objects.filter(
-                        year=year,
-                        section_number=section_number,
-                        course=course
-                    )
-                    if assigned.exists():
-                        assigned_instructors = list(assigned.first().instructors.all())
-                        if assigned_instructors:
-                            instructor = assigned_instructors[0]  # Use main instructor for checking
-                            if self.isInstructorBusy(instructor, mt):
-                                has_conflict = True
-                                break
-                
-                # Add block with conflict flag (prefer conflict-free but allow conflicted as fallback)
-                valid_blocks.append((block, has_conflict))
-
-        if not valid_blocks:
-            logger.warning(f"CONTINUOUS BLOCK FAILED: {course.course_number} ({course.course_type}) Section {section_number} - No valid continuous time slots found!")
-            return
-
-        # ⭐ SMART BLOCK SELECTION: Prefer conflict-free blocks over conflicted ones
-        conflict_free_blocks = [block for block, has_conflict in valid_blocks if not has_conflict]
-        conflicted_blocks = [block for block, has_conflict in valid_blocks if has_conflict]
-        
-        # Use conflict-free blocks if available, otherwise use conflicted blocks as fallback
-        blocks_to_use = conflict_free_blocks if conflict_free_blocks else conflicted_blocks
-        
-        if not blocks_to_use:
-            logger.warning(f"CONTINUOUS BLOCK FAILED: {course.course_number} Section {section_number} - No usable blocks!")
-            return
-
-        # ELECTIVE → Use ONLY pre-allocated time block (MANDATORY)
-        if course.course_type == 'ELECTIVE':
-            block_key = f"{course.course_number}_continuous"
-            if block_key in data.elective_time_tracker:
-                selected_block = data.elective_time_tracker[block_key]
-            else:
-                # Fallback - but this violates synchronization
-                selected_block = random.choice(blocks_to_use)
-                data.elective_time_tracker[block_key] = selected_block
-        else:
-            # GENTLE EARLY-BIASED SELECTION: Soft preference for earlier blocks
-            # 70% chance to use early bias, 30% pure random for genetic diversity
-            if blocks_to_use and random.random() < 0.7:
-                slot_order = [t[0] for t in TIME_SLOTS]
-                blocks_sorted = sorted(blocks_to_use, 
-                                      key=lambda block: slot_order.index(block[0].time) if block[0].time in slot_order else 999)
-                
-                # Gentle weights: early blocks 2-3x more likely (not 8x)
-                n = len(blocks_sorted)
-                if n > 1:
-                    # Linear decay instead of exponential
-                    weights = [1.0 + (n - i) / n for i in range(n)]
-                    selected_block = random.choices(blocks_sorted, weights=weights, k=1)[0]
-                elif n == 1:
-                    selected_block = blocks_sorted[0]
-                else:
-                    return  # No valid blocks
-            elif blocks_to_use:
-                # Pure random for diversity
-                selected_block = random.choice(blocks_to_use)
-            else:
-                return  # No valid blocks available
-
-        # ⭐ mark day reserved for this course
-        used_days = self.course_day_tracker.get((section_number, course.course_number), set())
-        used_days.add(selected_block[0].day)
-        self.course_day_tracker[(section_number, course.course_number)] = used_days
-
-        # instructor
-        assigned = CourseInstructorAssignment.objects.filter(
-            year=year,
-            section_number=section_number,
-            course=course
-        )
-        if assigned.exists():
-            # Get all instructors for this section, pick randomly if multiple
-            assigned_instructors = list(assigned.first().instructors.all())
-            instructor = random.choice(assigned_instructors) if assigned_instructors else None
-        else:
-            instructors = list(course.instructors.all())
-            instructor = random.choice(instructors) if instructors else None
-
-        # Room - For LAB courses, randomly select from assigned lab rooms
-        if course.course_type == 'LAB':
-            available_labs = list(course.lab_rooms.all())
-            if available_labs:
-                room = random.choice(available_labs)
-            else:
-                room = None
-        else:
-            room = None
-
-        # create classes
-        for mt in selected_block:
-            newClass = Class(year, section_number, course, batch='FULL')
-            newClass.set_meetingTime(mt)
-            newClass.set_room(room)
-            newClass.set_instructor(instructor)
-            self._classes.append(newClass)
-
-
-    def initialize(self):
-        sections = self._data.get_sections()  # Returns [1, 2, 3]
-        year = self._data.get_year()  # Get year from Data
-        
-        # Reset elective single time indices for this schedule
-        # Each schedule needs to use the same sequence for all sections
-        for key in list(self._data.elective_time_tracker.keys()):
-            if key.endswith('_single_index'):
-                self._data.elective_time_tracker[key] = {}
-
-        all_courses = year.courses.all()
-        
-        # Separate courses by type and sort by priority
-        lab_courses = list(all_courses.filter(course_type='LAB').order_by('-priority'))
-        elective_courses = list(all_courses.filter(course_type='ELECTIVE').order_by('-priority'))
-        
-        # Split THEORY courses into two groups
-        all_theory = all_courses.filter(course_type='THEORY').order_by('-priority')
-        continuous_theory_courses = list(all_theory.filter(max_continuous_hours__gt=1))  # TP courses (need 2+ continuous hours)
-        regular_theory_courses = list(all_theory.filter(max_continuous_hours=1))  # Regular theory (1 hour each)
-        
-        # ========================================================================
-        # PHASE 1: Schedule ALL LAB courses (HIGHEST PRIORITY)
-        # ========================================================================
-        # Labs need continuous time blocks and specific lab rooms
-        # Labs MUST be scheduled with 100% hours - no reduction allowed
-        # Labs cannot cross lunch break
-        
-        phase1_classes_before = len(self._classes)
-        for section_number in sections:
-            for course in lab_courses:
-                remaining_hours = course.hours_per_week
-                
-                # Labs must be continuous (STRICT requirement)
-                if course.max_continuous_hours > 1:
-                    block_start_len = len(self._classes)
-                    self.addContinuousCourse(self._data, course, year, section_number)
-                    
-                    # BUGFIX: Count hours actually scheduled
-                    hours_actually_scheduled = len(self._classes) - block_start_len
-                    remaining_hours -= hours_actually_scheduled
-                    
-                    # Log only failures (these cause high conflicts)
-                    if hours_actually_scheduled < course.hours_per_week:
-                        logger.warning(f"❌ {course.course_number} Section {section_number}: Scheduled {hours_actually_scheduled}/{course.hours_per_week} hours (CONTINUOUS BLOCK FAILED)")
-                
-                # ❌ CRITICAL: Labs MUST be continuous - DO NOT schedule remaining hours separately
-                # If continuous block failed, it will be penalized in fitness
-        
-        # ========================================================================
-        # PHASE 2: Schedule ELECTIVE courses (PARALLEL SECTION RULE)
-        # ========================================================================
-        # Electives MUST occur at the same time for all sections
-        # Students from multiple sections attend together
-        # Schedule electives BEFORE theory so they lock specific time slots
-        
-        phase2_classes_before = len(self._classes)
-        for section_number in sections:
-            for course in elective_courses:
-                remaining_hours = course.hours_per_week
-                
-                # Continuous block if specified
-                if course.max_continuous_hours > 1:
-                    block_start_len = len(self._classes)
-                    self.addContinuousCourse(self._data, course, year, section_number)
-                    
-                    # BUGFIX: Count hours actually scheduled
-                    hours_actually_scheduled = len(self._classes) - block_start_len
-                    remaining_hours -= hours_actually_scheduled
-                    
-                    # Log if continuous block failed for elective
-                    if hours_actually_scheduled == 0:
-                        logger.warning(f"ELECTIVE CONTINUOUS BLOCK FAILED: {course.course_number} Section {section_number} - No valid continuous time slots found")
-                
-                # Remaining single periods (synchronized across sections)
-                for i in range(remaining_hours):
-                    self.addCourse(self._data, course, all_courses, year, section_number)
-        
-        # ========================================================================
-        # PHASE 3: Schedule CONTINUOUS THEORY courses (e.g., TP courses)
-        # ========================================================================
-        # Schedule THEORY courses that need multiple continuous hours (e.g., TP courses with 2 continuous hours)
-        # These MUST be scheduled BEFORE regular theory to ensure continuous slots are available
-        # Examples: TP courses (23TP9102, 23TP9103, etc.) with hours_per_week=2, max_continuous_hours=2
-        
-        phase3_classes_before = len(self._classes)
-        for section_number in sections:
-            for course in continuous_theory_courses:
-                remaining_hours = course.hours_per_week
-                
-                # These courses need continuous blocks - schedule them first
-                if course.max_continuous_hours > 1 and remaining_hours >= course.max_continuous_hours:
-                    block_start_len = len(self._classes)
-                    self.addContinuousCourse(self._data, course, year, section_number)
-                    
-                    # Track hours actually scheduled
-                    hours_actually_scheduled = len(self._classes) - block_start_len
-                    remaining_hours -= hours_actually_scheduled
-                    
-                    # Log if continuous block failed
-                    if hours_actually_scheduled == 0:
-                        logger.warning(f"CONTINUOUS THEORY BLOCK FAILED: {course.course_number} Section {section_number} - No valid continuous time slots found")
-                
-                # ⭐ CRITICAL FIX FOR TP COURSES:
-                # Only schedule remaining hours separately if the course ALLOWS partial continuity
-                # For TP courses where hours_per_week == max_continuous_hours (e.g., 2==2),
-                # ALL hours MUST be continuous - do NOT fall back to separate scheduling
-                # This ensures TP courses are NEVER split into non-continuous periods
-                if course.hours_per_week > course.max_continuous_hours:
-                    # Course allows some hours to be separate (e.g., 4 hrs/week, 2 max continuous)
-                    # Schedule remaining hours separately
-                    attempts = 0
-                    max_attempts = remaining_hours * 50
-                    
-                    while remaining_hours > 0 and attempts < max_attempts:
-                        attempts += 1
-                        self.addCourse(self._data, course, all_courses, year, section_number)
-                        remaining_hours -= 1
-        
-        phase3_classes_added = len(self._classes) - phase3_classes_before
-        logger.info(f"   PHASE 3 (Continuous THEORY): Scheduled {len(continuous_theory_courses)} continuous theory courses → {phase3_classes_added} class periods added")
-        
-        # ========================================================================
-        # PHASE 4: Schedule REGULAR THEORY courses (FILL REMAINING SLOTS)
-        # ========================================================================
-        # Regular theory courses (1 hour each) fill the remaining empty slots
-        # CRITICAL RULE: Theory subjects must be DISTRIBUTED across multiple days
-        # Example: 4 hrs/week, max_continuous=1 → Schedule on 4 different days if possible
-        
-        phase4_classes_before = len(self._classes)
-        for section_number in sections:
-            for course in regular_theory_courses:
-                # Track hours scheduled per day for this course-section combination
-                hours_per_day = {}  # {day: count}
-                
-                remaining_hours = course.hours_per_week
-                
-                # Regular theory courses are scheduled 1 hour at a time, distributed across days
-                # CRITICAL: Each hour should go to a DIFFERENT day (avoid bunching)
-                attempts = 0
-                max_attempts = remaining_hours * 50  # Safety limit
-                
-                while remaining_hours > 0 and attempts < max_attempts:
-                    attempts += 1
-                    
-                    # Get available meeting times for this section
-                    meeting_times = list(self._data.get_meetingTimes())
-                    
-                    # Get instructors from CourseInstructorAssignment (respects section-specific assignments)
-                    assigned = CourseInstructorAssignment.objects.filter(
-                        year=year,
-                        section_number=section_number,
-                        course=course
-                    )
-                    
-                    if assigned.exists():
-                        course_instructors = list(assigned.first().instructors.all())
-                    else:
-                        # Fallback to course instructors if no assignment exists
-                        course_instructors = list(course.instructors.all())
-                    
-                    if not course_instructors:
-                        logger.warning(f"No instructors available for {course.course_number} Section {section_number}")
-                        break
-                    
-                    # Try to find a slot on a day with FEWER hours of this course
-                    # Sort days by hours already scheduled (ascending)
-                    all_days = set(mt.day for mt in meeting_times)
-                    days_sorted = sorted(all_days, key=lambda d: hours_per_day.get(d, 0))
-                    
-                    # Try days with fewest hours first
-                    slot_found = False
-                    for preferred_day in days_sorted:
-                        # Limit: Don't exceed max_continuous_hours on any single day
-                        if hours_per_day.get(preferred_day, 0) >= course.max_continuous_hours:
-                            continue  # Skip this day - already at limit
-                        
-                        # Get meeting times for this preferred day
-                        day_meeting_times = [mt for mt in meeting_times if mt.day == preferred_day]
-                        
-                        # Try each time slot on this day
-                        for mt in day_meeting_times:
-                            # Check if this slot is available (no conflicts)
-                            conflict = False
-                            
-                            # Check instructor availability
-                            for inst in course_instructors:
-                                for cls in self._classes:
-                                    if cls.instructor == inst and cls.meeting_time == mt and cls.section_number != section_number:
-                                        conflict = True
-                                        break
-                                if conflict:
-                                    break
-                            
-                            # Check section availability
-                            if not conflict:
-                                for cls in self._classes:
-                                    if cls.section_number == section_number and cls.meeting_time == mt:
-                                        conflict = True
-                                        break
-                            
-                            # If no conflict, assign this slot
-                            if not conflict:
-                                instructor = random.choice(course_instructors)
-                                
-                                newClass = Class(year, section_number, course, batch='FULL')
-                                newClass.set_meetingTime(mt)
-                                newClass.set_room(None)  # Theory courses don't need specific rooms
-                                newClass.set_instructor(instructor)
-                                self._classes.append(newClass)
-                                
-                                # Track this hour on this day
-                                hours_per_day[preferred_day] = hours_per_day.get(preferred_day, 0) + 1
-                                remaining_hours -= 1
-                                slot_found = True
-                                break
-                        
-                        if slot_found:
-                            break
-                    
-                    # If no slot found after trying all days, break to avoid infinite loop
-                    if not slot_found:
-                        break
-                
-                # Do NOT log here - this runs for every schedule (150+ times during population creation)
-                # Missing hours are penalized in fitness calculation
-
-        return self
-
     def validate_continuous_theory_strict(self):
         """
-        ⭐ STRICT VALIDATION for TP courses and other continuous theory courses
+        â­ STRICT VALIDATION for TP courses and other continuous theory courses
         Returns True only if ALL courses with hours_per_week == max_continuous_hours > 1
         are scheduled as continuous blocks on the same day.
         
@@ -691,19 +162,19 @@ class Schedule:
             
             # REJECT: Split across multiple days
             if len(days) > 1:
-                logger.warning(f"⭐ STRICT REJECT: {course.course_number} Sec {section} split across {len(days)} days")
+                logger.warning(f"â­ STRICT REJECT: {course.course_number} Sec {section} split across {len(days)} days")
                 return False
             
             # REJECT: Not enough hours
             if len(days) == 0:
-                logger.warning(f"⭐ STRICT REJECT: {course.course_number} Sec {section} has no hours scheduled")
+                logger.warning(f"â­ STRICT REJECT: {course.course_number} Sec {section} has no hours scheduled")
                 return False
             
             day = list(days.keys())[0]
             times = days[day]
             
             if len(times) < required:
-                logger.warning(f"⭐ STRICT REJECT: {course.course_number} Sec {section} has only {len(times)}/{required} hours")
+                logger.warning(f"â­ STRICT REJECT: {course.course_number} Sec {section} has only {len(times)}/{required} hours")
                 return False
             
             # Check continuity
@@ -717,11 +188,97 @@ class Schedule:
             
             # REJECT: Not continuous
             if not continuous_found:
-                logger.warning(f"⭐ STRICT REJECT: {course.course_number} Sec {section} NOT continuous: {times}")
+                logger.warning(f"â­ STRICT REJECT: {course.course_number} Sec {section} NOT continuous: {times}")
                 return False
         
         # All checks passed
         return True
+
+    def validate_full_course_allocation(self):
+        """
+        Ensure every course gets all required weekly hours in every section.
+        Counts unique section-course-day-time slots to avoid duplicate instructor entries.
+        """
+        year = self._data.get_year()
+        if not year:
+            return True
+
+        delivered_slots = set()
+        for c in self.getClasses():
+            delivered_slots.add((c.section_number, c.course.course_number, c.meeting_time.day, c.meeting_time.time))
+
+        delivered = {}
+        for section, course_num, day, time in delivered_slots:
+            key = (section, course_num)
+            delivered[key] = delivered.get(key, 0) + 1
+
+        for course in year.courses.all():
+            for section in self._data.get_sections():
+                key = (section, course.course_number)
+                got = delivered.get(key, 0)
+                need = course.hours_per_week
+                if got < need:
+                    logger.warning(
+                        f"HOUR ALLOCATION REJECT: {course.course_number} Sec{section} has {got}/{need} hours"
+                    )
+                    return False
+
+        return True
+
+    def get_allocation_report(self):
+        """
+        Generate a detailed allocation report for diagnostics.
+        Returns: {
+            'total_hours_delivered': int,
+            'total_hours_needed': int,
+            'complete_courses': list of (section, course_number),
+            'incomplete_courses': list of {section, course_num, got, need}
+        }
+        """
+        year = self._data.get_year()
+        if not year:
+            return None
+
+        delivered_slots = set()
+        for c in self.getClasses():
+            delivered_slots.add((c.section_number, c.course.course_number, c.meeting_time.day, c.meeting_time.time))
+
+        delivered = {}
+        for section, course_num, day, time in delivered_slots:
+            key = (section, course_num)
+            delivered[key] = delivered.get(key, 0) + 1
+
+        complete = []
+        incomplete = []
+        total_delivered = 0
+        total_needed = 0
+
+        for course in year.courses.all():
+            for section in self._data.get_sections():
+                key = (section, course.course_number)
+                got = delivered.get(key, 0)
+                need = course.hours_per_week
+                total_delivered += got
+                total_needed += need
+
+                if got >= need:
+                    complete.append((section, course.course_number))
+                else:
+                    incomplete.append({
+                        'section': section,
+                        'course': course.course_number,
+                        'got': got,
+                        'need': need,
+                        'missing': need - got
+                    })
+
+        return {
+            'total_delivered': total_delivered,
+            'total_needed': total_needed,
+            'complete': len(complete),
+            'incomplete_count': len(incomplete),
+            'incomplete_list': incomplete
+        }
 
     def calculateFitness(self):
 
@@ -794,7 +351,7 @@ class Schedule:
         # ------------------------------
         # THEORY CONTINUITY CONSTRAINT - STRICT (for TP courses and other continuous theory)
         # ------------------------------
-        # ⭐ STRICT CONSTRAINT: THEORY courses where hours_per_week == max_continuous_hours > 1
+        # â­ STRICT CONSTRAINT: THEORY courses where hours_per_week == max_continuous_hours > 1
         # MUST have ALL hours as a continuous block on one day (e.g., TP courses with 2 continuous hours)
         # This is NON-NEGOTIABLE - violations get MASSIVE penalty (10000) to force rejection
         theory_by_section_course = {}  # {(section, course): [(day, time), ...]}
@@ -807,7 +364,7 @@ class Schedule:
             if c.course.max_continuous_hours <= 1:
                 continue
             
-            # ⭐ STRICT: Only check courses where ALL weekly hours should be continuous
+            # â­ STRICT: Only check courses where ALL weekly hours should be continuous
             # This targets TP courses: hours_per_week == max_continuous_hours (e.g., 2 == 2)
             if c.course.hours_per_week != c.course.max_continuous_hours:
                 continue
@@ -829,7 +386,7 @@ class Schedule:
                     days[day] = []
                 days[day].append(time)
             
-            # ⭐ STRICT VIOLATION: Hours split across multiple days - UNACCEPTABLE
+            # â­ STRICT VIOLATION: Hours split across multiple days - UNACCEPTABLE
             if len(days) > 1:
                 self._numberOfConflicts += 10000  # MASSIVE penalty - forces rejection
                 logger.error(f"STRICT VIOLATION: {course.course_number} Section {section} split across {len(days)} days (Must be on ONE day)")
@@ -840,7 +397,7 @@ class Schedule:
                 day = list(days.keys())[0]
                 times = days[day]
                 
-                # ⭐ STRICT VIOLATION: Missing hours
+                # â­ STRICT VIOLATION: Missing hours
                 if len(times) < required:
                     self._numberOfConflicts += 10000  # MASSIVE penalty
                     logger.error(f"STRICT VIOLATION: {course.course_number} Section {section} has only {len(times)}/{required} hours")
@@ -856,7 +413,7 @@ class Schedule:
                         continuous_found = True
                         break
 
-                # ⭐ STRICT VIOLATION: Hours NOT continuous (e.g., 9:45-10:35 and 1:05-1:55)
+                # â­ STRICT VIOLATION: Hours NOT continuous (e.g., 9:45-10:35 and 1:05-1:55)
                 if not continuous_found:
                     self._numberOfConflicts += 10000  # MASSIVE penalty - forces rejection
                     logger.error(f"STRICT VIOLATION: {course.course_number} Section {section} has {len(times)} hours but NOT continuous on {day}")
@@ -1012,6 +569,68 @@ class Schedule:
 
 class ConstraintScheduler:
     """Constraint-based scheduler - builds valid timetables systematically"""
+
+    def _get_teaching_period_number(self, time_value, year=None):
+        """Map timetable slot to teaching period number (1-7), excluding lunch."""
+        lunch_period = year.lunch_period if year and hasattr(year, 'lunch_period') else 5
+        teaching_period = 0
+
+        for slot_idx, slot in enumerate(TIME_SLOTS, start=1):
+            if slot_idx == lunch_period:
+                continue
+            teaching_period += 1
+            if slot[0] == time_value:
+                return teaching_period
+
+        return None
+
+    def _get_instructor_priority_lookup(self, instructor):
+        """Load and cache {day: {period: priority}} for an instructor."""
+        from .models import InstructorPriority
+
+        if not hasattr(self, '_instructor_priority_cache'):
+            self._instructor_priority_cache = {}
+
+        cache_key = instructor.id if instructor else None
+        if cache_key in self._instructor_priority_cache:
+            return self._instructor_priority_cache[cache_key]
+
+        priority_lookup = {}
+        if instructor:
+            priorities = InstructorPriority.objects.filter(instructor=instructor)
+            for obj in priorities:
+                day_priorities = {}
+                for period in range(1, 8):
+                    day_priorities[period] = obj.get_period_priority(period)
+                priority_lookup[obj.day] = day_priorities
+
+        self._instructor_priority_cache[cache_key] = priority_lookup
+        return priority_lookup
+
+    def _sort_meeting_times_by_instructor_priority(self, meeting_times, instructor=None, year=None):
+        """Sort slots by instructor priority first, then by day/time."""
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        time_order = [t[0] for t in TIME_SLOTS]
+
+        if not instructor:
+            return sorted(meeting_times, key=lambda mt: (
+                day_order.index(mt.day) if mt.day in day_order else 999,
+                time_order.index(mt.time) if mt.time in time_order else 999
+            ))
+
+        priority_lookup = self._get_instructor_priority_lookup(instructor)
+
+        def sort_key(mt):
+            period = self._get_teaching_period_number(mt.time, year)
+            day_priorities = priority_lookup.get(mt.day, {})
+            priority = day_priorities.get(period, 999) if period else 999
+            return (
+                priority,
+                day_order.index(mt.day) if mt.day in day_order else 999,
+                time_order.index(mt.time) if mt.time in time_order else 999
+            )
+
+        return sorted(meeting_times, key=sort_key)
     
     def _sort_meeting_times_chronologically(self, meeting_times):
         """Sort meeting times to eliminate gaps - prefer earlier slots"""
@@ -1029,73 +648,205 @@ class ConstraintScheduler:
         schedule._data = data
         schedule._classes = []
         schedule.course_day_tracker = {}
-        
+
         all_courses = selected_year.courses.all()
         sections = data.get_sections()
-        
-        # Priority order: LABs first (hardest), then continuous theory (TP), then regular theory
-        lab_courses = sorted([c for c in all_courses if c.course_type == 'LAB'], 
-                            key=lambda x: -x.max_continuous_hours)  # Longer labs first
-        elective_courses = [c for c in all_courses if c.course_type == 'ELECTIVE']
-        
-        # Split THEORY courses into continuous (TP courses) and regular
-        all_theory = all_courses.filter(course_type='THEORY')
+
+        # Helper: Identify courses needing alignment (same time for all sections)
+        def needs_section_alignment(course):
+            if course.course_type == 'LAB':
+                return False
+            
+            # EXCLUDE TP courses from forced alignment (they need strict 2-hour continuity)
+            if 'TP' in course.course_number:
+                return False
+            
+            # CHECK: If same instructor teaches multiple sections, DON'T force alignment
+            try:
+                from SchedulerApp.models import CourseInstructorAssignment
+                assignments = CourseInstructorAssignment.objects.filter(course=course)
+                if assignments.exists():
+                    instructors_per_section = {}
+                    for a in assignments:
+                        inst_ids = set(a.instructors.values_list('id', flat=True))
+                        if a.section_number not in instructors_per_section:
+                            instructors_per_section[a.section_number] = inst_ids
+                        else:
+                            instructors_per_section[a.section_number].update(inst_ids)
+                    
+                    all_instructors = set()
+                    for section_insts in instructors_per_section.values():
+                        intersection = all_instructors & section_insts
+                        if intersection:
+                            return False
+                        all_instructors.update(section_insts)
+            except:
+                pass
+            
+            if course.course_type == 'ELECTIVE':
+                return True
+            if course.course_number.startswith('23IT6') or course.course_number.startswith('23IT7'):
+                return True
+            if course.course_number.startswith('23IT5') and course.course_type != 'LAB':
+                return True
+            return False
+
+        # Priority order
+        lab_courses = sorted([c for c in all_courses if c.course_type == 'LAB'], key=lambda x: -x.max_continuous_hours)
+        elective_courses = [c for c in all_courses if needs_section_alignment(c)]
+        all_theory = [c for c in all_courses.filter(course_type='THEORY') if c not in elective_courses]
         continuous_theory_courses = [c for c in all_theory if c.max_continuous_hours > 1]
         regular_theory_courses = [c for c in all_theory if c.max_continuous_hours == 1]
-        
-        logger.info(f"?? Scheduling {len(lab_courses)} LABs, {len(elective_courses)} ELECTIVEs, {len(continuous_theory_courses)} continuous THEORY, {len(regular_theory_courses)} regular THEORY courses")
-        
-        # === PHASE 1: Schedule LABs (need continuous blocks) ===
+
+        # Constrained-first ordering improves feasibility and full hour allocation.
+        def min_instructor_options(course):
+            counts = []
+            for section in sections:
+                assigned = CourseInstructorAssignment.objects.filter(
+                    year=selected_year,
+                    section_number=section,
+                    course=course
+                ).first()
+                if assigned:
+                    cnt = assigned.instructors.count()
+                else:
+                    cnt = course.instructors.count()
+                counts.append(cnt if cnt > 0 else 999)
+            return min(counts) if counts else 999
+
+        continuous_theory_courses = sorted(
+            continuous_theory_courses,
+            key=lambda c: (min_instructor_options(c), -c.max_continuous_hours, -c.hours_per_week)
+        )
+        regular_theory_courses = sorted(
+            regular_theory_courses,
+            key=lambda c: (min_instructor_options(c), -c.hours_per_week)
+        )
+
+        logger.info(f"ðŸ”· Scheduling Order: {len(lab_courses)} LABs â†’ {len(elective_courses)} ELECTIVEs â†’ {len(continuous_theory_courses)} TP courses â†’ {len(regular_theory_courses)} regular THEORY")
+
+        # PHASE 1: LABS
         for course in lab_courses:
             logger.info(f"  ====> Processing LAB course: {course.course_number}")
             for section in sections:
                 logger.info(f"    ====> Section {section}")
                 if not self._schedule_lab_course(schedule, data, course, selected_year, section):
                     logger.warning(f"Failed to schedule LAB {course.course_number} for section {section}")
-                    # Don't fail completely - continue to try other courses
-                    # Some labs might not be schedulable due to conflicts, but we can still try others
-        
-        # === PHASE 2: Schedule ELECTIVEs (same time for all sections) ===
+
+        # PHASE 2: ELECTIVES (aligned)
+        unscheduled_electives = []
         for course in elective_courses:
             if not self._schedule_elective_course(schedule, data, course, selected_year, sections):
-                logger.warning(f"Failed to schedule ELECTIVE {course.course_number}")
-                # Don't fail completely - continue with other courses
-        
-        # === PHASE 3: Schedule CONTINUOUS THEORY courses (e.g., TP courses) ===
-        # These courses prefer continuous blocks but can fall back to separate periods if needed
+                logger.warning(f"âš  ELECTIVE {course.course_number} failed parallel scheduling - will retry separately")
+                unscheduled_electives.append(course)
+
+        # PHASE 3: CONTINUOUS THEORY (TP)
         for course in continuous_theory_courses:
-            logger.info(f"  ====> Processing CONTINUOUS THEORY course: {course.course_number}")
+            logger.info(f"  ====> Processing TP course: {course.course_number}")
             for section in sections:
                 if not self._schedule_theory_course(schedule, data, course, selected_year, section):
-                    logger.warning(f"Failed to schedule CONTINUOUS THEORY {course.course_number} for section {section}")
-                    # Don't fail completely - try to continue with other courses
-                    # return None
-        
-        # === PHASE 4: Schedule REGULAR THEORY courses ===
+                    logger.warning(f"Failed to schedule TP {course.course_number} for section {section}")
+
+        # PHASE 4: REGULAR THEORY
+        unscheduled_theory = []
         for course in regular_theory_courses:
             for section in sections:
                 if not self._schedule_theory_course(schedule, data, course, selected_year, section):
-                    logger.warning(f"Failed to schedule REGULAR THEORY {course.course_number} for section {section}")
-                    # Don't fail completely - partial schedules are acceptable
-        
-        # === PHASE 5: Schedule Special Periods (Counseling, Training, Sports/Library) ===
-        logger.info("?? Starting special periods scheduling...")
+                    logger.warning(f"âš  REGULAR THEORY {course.course_number} Sec{section} failed - will retry in gap-filling")
+                    unscheduled_theory.append((course, section))
+
+        # PHASE 4.5: RETRY FAILED ELECTIVES
+        if unscheduled_electives:
+            logger.info(f"ðŸ”§ GAP-FILLING: Attempting to schedule {len(unscheduled_electives)} failed electives WITH ALIGNMENT")
+            for course in unscheduled_electives:
+                if not self._schedule_elective_course_dynamic(schedule, data, course, selected_year, sections):
+                    logger.error(f"âŒ CRITICAL: ELECTIVE {course.course_number} could not be scheduled even with dynamic search!")
+                    logger.error("   This elective will have incomplete hours - manual adjustment needed")
+                else:
+                    logger.info(f"âœ“ Gap-filled ELECTIVE {course.course_number} with alignment maintained")
+
+        # PHASE 4.6: RETRY FAILED THEORY
+        if unscheduled_theory:
+            logger.info(f"ðŸ”§ GAP-FILLING: Attempting to schedule {len(unscheduled_theory)} failed theory courses")
+            for course, section in unscheduled_theory:
+                if not self._schedule_theory_course_relaxed(schedule, data, course, selected_year, section):
+                    logger.error(f"âŒ CRITICAL: THEORY {course.course_number} Sec{section} could not be scheduled even with relaxed constraints!")
+                else:
+                    logger.info(f"âœ“ Gap-filled THEORY {course.course_number} Sec{section}")
+
+        # PHASE 4.9: FINAL GAP FILL
+        logger.info("ðŸ”§ FINAL GAP CHECK: Verifying all courses are fully scheduled")
+        final_gaps_found = False
+
+        for course in all_courses:
+            if needs_section_alignment(course):
+                for section in sections:
+                    scheduled_count = sum(
+                        1 for cls in schedule._classes
+                        if cls.section_number == section
+                        and cls.course == course
+                        and cls.course.course_number not in ['COUNSELING', 'SPORTS_LIBRARY', 'SPORT', 'COUNS']
+                    )
+                    needed = course.hours_per_week
+                    if scheduled_count < needed:
+                        missing = needed - scheduled_count
+                        logger.error(f"âš ï¸ ELECTIVE GAP (cannot force-fill): {course.course_number} Sec{section} missing {missing}/{needed} hours")
+                        logger.error("   Electives require alignment - manual adjustment or regeneration needed")
+                continue
+
+            for section in sections:
+                scheduled_count = sum(
+                    1 for cls in schedule._classes
+                    if cls.section_number == section
+                    and cls.course == course
+                    and cls.course.course_number not in ['COUNSELING', 'SPORTS_LIBRARY', 'SPORT', 'COUNS']
+                )
+                needed = course.hours_per_week
+
+                if scheduled_count < needed:
+                    missing = needed - scheduled_count
+                    logger.warning(f"âš  FINAL GAP: {course.course_number} Sec{section} missing {missing}/{needed} hours")
+                    final_gaps_found = True
+
+                    for _ in range(missing):
+                        if not self._force_schedule_single_hour(schedule, data, course, selected_year, section):
+                            logger.error(f"âŒ CRITICAL: Could not force-schedule {course.course_number} Sec{section}")
+                            break
+
+                    new_count = sum(
+                        1 for cls in schedule._classes
+                        if cls.section_number == section
+                        and cls.course == course
+                        and cls.course.course_number not in ['COUNSELING', 'SPORTS_LIBRARY', 'SPORT', 'COUNS']
+                    )
+                    if new_count == needed:
+                        logger.info(f"âœ“ Force-filled {course.course_number} Sec{section}: {new_count}/{needed}")
+
+        if not final_gaps_found:
+            logger.info("âœ“ All courses fully scheduled - no gaps remaining")
+
+        # PHASE 5: Special periods
+        logger.info("ðŸ“… Starting special periods scheduling...")
         if not self._schedule_special_periods(schedule, data, selected_year, sections):
             logger.warning("Failed to schedule some special periods (continuing anyway)")
-        
-        logger.info(f"Successfully scheduled {len(schedule._classes)} classes")
+
+        # Validation check: TP continuity (warn if violated, but don't reject)
+        # For 3rd year and other constrained years, full constraint satisfaction may be infeasible
+        tp_continuous = schedule.validate_continuous_theory_strict()
+        full_hours = schedule.validate_full_course_allocation()
+
+        if not tp_continuous:
+            logger.warning("âš ï¸ TP continuity constraint violated (some TP courses split across days)")
+        if not full_hours:
+            logger.warning("âš ï¸ Some courses lack full weekly hour allocation (partial schedule)")
+
+        logger.info(f"âœ… Successfully scheduled {len(schedule._classes)} classes")
         return schedule
     
     def _schedule_lab_course(self, schedule, data, course, year, section):
         """Schedule a LAB course (needs continuous time blocks)"""
-        from .models import LabBatchAssignment
         
-        # Check if this course uses batch splitting
-        if course.split_into_batches:
-            logger.info(f"  Scheduling SPLIT LAB {course.course_number} (Sec {section}) with batch rotation")
-            return self._schedule_split_lab_course(schedule, data, course, year, section)
-        
-        # Regular lab scheduling (full section)
+# Regular lab scheduling (full section)
         hours_needed = course.max_continuous_hours
         hours_per_week = course.hours_per_week  # Total hours per week
         classes_needed = hours_per_week // hours_needed
@@ -1118,7 +869,7 @@ class ConstraintScheduler:
         else:
             logger.info(f"    No lab room assigned (classroom-based lab)")
         
-        available_blocks = self._find_continuous_blocks(data, hours_needed)
+        available_blocks = self._find_continuous_blocks(data, hours_needed, main_instructor, year)
         logger.info(f"    Found {len(available_blocks)} continuous {hours_needed}-hour blocks total")
         
         # Filter blocks that don't conflict - check ONLY main instructor
@@ -1151,7 +902,7 @@ class ConstraintScheduler:
             
             # Create entry for MAIN instructor
             for mt in block:
-                new_class = Class(year, section, course, batch='FULL', is_evaluator=False)
+                new_class = Class(year, section, course, is_evaluator=False)
                 new_class.set_meetingTime(mt)
                 new_class.set_instructor(main_instructor)
                 new_class.set_room(lab_room)
@@ -1160,7 +911,7 @@ class ConstraintScheduler:
             # Create entries for EVALUATORS (if any)
             for evaluator in evaluators:
                 for mt in block:
-                    new_class = Class(year, section, course, batch='FULL', is_evaluator=True)
+                    new_class = Class(year, section, course, is_evaluator=True)
                     new_class.set_meetingTime(mt)
                     new_class.set_instructor(evaluator)
                     new_class.set_room(lab_room)
@@ -1168,171 +919,106 @@ class ConstraintScheduler:
         
         return True
     
-    def _schedule_split_lab_course(self, schedule, data, course, year, section):
-        """
-        Schedule a LAB course with batch splitting (B1 and B2).
-        Uses LabBatchAssignment to determine which batch gets which instructor/lab.
-        Scheduler AUTOMATICALLY finds available time slots based on batch assignments.
-        
-        Example:
-        Session 1 (auto-scheduled): B1 -> IoT Lab (Instructor A), B2 -> Cryptography Lab (Instructor B)
-        Session 2 (auto-scheduled): B1 -> Cryptography Lab (Instructor C), B2 -> IoT Lab (Instructor D)
-        """
-        from .models import LabBatchAssignment
-        
-        logger.info(f"    DEBUG _schedule_split_lab: {course.course_number} Sec {section}")
-        
-        # Get batch assignments for this course and section (grouped by session)
-        batch_assignments = LabBatchAssignment.objects.filter(
-            year=year,
-            section_number=section,
-            course=course
-        ).order_by('session_number', 'batch')
-        
-        logger.info(f"    DEBUG: Query found {batch_assignments.count()} assignments")
-        
-        if not batch_assignments.exists():
-            logger.warning(f"    No LabBatchAssignment found for {course.course_number} Sec {section}. Skipping batch scheduling.")
-            return True  # Don't fail, just skip this course
-        
-        logger.info(f"    Found {batch_assignments.count()} batch assignments")
-        
-        # Group assignments by session number
-        from collections import defaultdict
-        session_batches = defaultdict(list)
-        for assignment in batch_assignments:
-            session_batches[assignment.session_number].append(assignment)
-        
-        hours_per_block = course.max_continuous_hours
-        meeting_times = list(data.get_meetingTimes())
-        
-        # For each session, find an available time slot and schedule both batches
-        for session_num, assignments in sorted(session_batches.items()):
-            logger.info(f"    Scheduling Session {session_num}: {len(assignments)} batches")
-            logger.info(f"    DEBUG: Session {session_num} has {len(assignments)} batches")
-            
-            # Find continuous blocks that work for ALL batches in this session
-            available_blocks = self._find_continuous_blocks(data, hours_per_block)
-            
-            logger.info(f"    DEBUG: Found {len(available_blocks)} continuous blocks")
-            
-            if not available_blocks:
-                logger.error(f"      ERROR: No continuous {hours_per_block}-hour blocks available")
-                logger.info(f"    DEBUG: RETURNING FALSE - no continuous blocks")
-                return False
-            
-            # Try each available block until we find one that works for all batches
-            scheduled = False
-            for block in available_blocks:
-                # Check if this block works for ALL assignments in this session
-                can_schedule_all = True
-                
-                for assignment in assignments:
-                    # Get main instructor for availability check (evaluators can overlap)
-                    main_instructor = assignment.main_instructor
-                    if not main_instructor:
-                        # Fallback to first instructor if no main instructor set
-                        assignment_instructors = list(assignment.instructors.all())
-                        main_instructor = assignment_instructors[0] if assignment_instructors else None
-                    
-                    if not main_instructor:
-                        logger.error(f"      ERROR: No main instructor for {assignment.batch}")
-                        can_schedule_all = False
-                        break
-                    
-                    # Check conflicts for this batch with ONLY main instructor
-                    for mt in block:
-                        # Check if main instructor, room, or section is busy at this time
-                        for existing_class in schedule._classes:
-                            if existing_class.meeting_time.pid == mt.pid:
-                                # CRITICAL: Skip co-teaching entries (same course, same batch, same section)
-                                if (existing_class.course == course and
-                                    existing_class.section_number == section and
-                                    existing_class.batch == assignment.batch):
-                                    continue  # This is a co-teaching entry, not a conflict
-                                
-                                # Check if MAIN instructor conflicts (evaluators can overlap)
-                                if existing_class.instructor == main_instructor:
-                                    can_schedule_all = False
-                                    break
-                                    
-                                # Same lab room conflict
-                                if existing_class.room == assignment.lab_room:
-                                    can_schedule_all = False
-                                    break
-                                # Same section conflict (but different batch is OK)
-                                if (existing_class.section_number == section and 
-                                    existing_class.year == year and
-                                    existing_class.batch == assignment.batch):
-                                    can_schedule_all = False
-                                    break
-                        if not can_schedule_all:
-                            break
-                    if not can_schedule_all:
-                        break
-                
-                if can_schedule_all:
-                    # Schedule ALL batches for this session at this time
-                    for assignment in assignments:
-                        day_name = block[0].day
-                        time_range = f"{block[0].time} to {block[-1].time}"
-                        
-                        # Get main instructor for this batch
-                        main_instructor_for_batch = assignment.main_instructor
-                        if not main_instructor_for_batch:
-                            # Fallback to first instructor if no main set
-                            assignment_instructors = list(assignment.instructors.all())
-                            main_instructor_for_batch = assignment_instructors[0] if assignment_instructors else None
-                        
-                        if main_instructor_for_batch:
-                            # Auto-select evaluators from same department who are free
-                            evaluators = self._get_available_evaluators(schedule, block, course, main_instructor_for_batch, year=year, max_evaluators=2)
-                            
-                            # Instructors for this batch = main + auto-selected evaluators
-                            batch_instructors = [main_instructor_for_batch] + evaluators
-                            instructor_names = ", ".join([inst.name for inst in batch_instructors])
-                            
-                            logger.info(f"      Session {session_num} {assignment.batch}: {course.course_number} @ {day_name} {time_range}")
-                            logger.info(f"        {len(batch_instructors)} instructors: {instructor_names} - {assignment.lab_room}")
-                            
-                            # Create entries for each instructor
-                            for instructor in batch_instructors:
-                                for mt in block:
-                                    new_class = Class(year, section, course, batch=assignment.batch)
-                                    new_class.set_meetingTime(mt)
-                                    new_class.set_instructor(instructor)
-                                    new_class.set_room(assignment.lab_room)
-                                    schedule._classes.append(new_class)
-                        else:
-                            logger.warning(f"        WARNING: No main instructor for {assignment.batch}")
-                    
-                    scheduled = True
-                    break
-            
-            logger.info(f"    DEBUG: Session {session_num} scheduled={scheduled}")
-            if not scheduled:
-                logger.error(f"      ERROR: Could not schedule Session {session_num} for {course.course_number}")
-                logger.info(f"    DEBUG: RETURNING FALSE - could not schedule session {session_num}")
-                return False
-        
-        logger.info(f"    DEBUG: All sessions scheduled successfully")
-        return True
     
     def _schedule_elective_course(self, schedule, data, course, year, sections):
-        """Schedule ELECTIVE (same time for all sections, spread across days AND time slots)"""
+        """
+        Schedule ELECTIVE using PRE-ALLOCATED times (same time for all sections).
+        Uses the elective_time_tracker to ensure all sections have electives at the same time.
+        """
+        hours_per_week = course.hours_per_week
+        max_continuous = course.max_continuous_hours if course.max_continuous_hours > 0 else hours_per_week
+        
+        logger.info(f"  Scheduling ELECTIVE {course.course_number}: {hours_per_week}hrs using pre-allocated times")
+        
+        # Get pre-allocated times from elective_time_tracker
+        continuous_hours = max_continuous if max_continuous > 1 else 0
+        single_hours = hours_per_week - continuous_hours
+        
+        times_to_use = []
+        
+        # FIRST: Get continuous block if exists
+        if continuous_hours > 0:
+            block_key = f"{course.course_number}_continuous"
+            if block_key in data.elective_time_tracker:
+                continuous_block = data.elective_time_tracker[block_key]
+                times_to_use.extend(continuous_block)
+                logger.info(f"    Using pre-allocated continuous block: {continuous_block[0].day} {[mt.time for mt in continuous_block]}")
+        
+        # SECOND: Get single period times if exists
+        if single_hours > 0:
+            single_key = f"{course.course_number}_single"
+            if single_key in data.elective_time_tracker:
+                single_times = data.elective_time_tracker[single_key]
+                times_to_use.extend(single_times)
+                logger.info(f"    Using pre-allocated single times: {[(mt.day, mt.time) for mt in single_times]}")
+        
+        # Verify we have enough pre-allocated times
+        if len(times_to_use) < hours_per_week:
+            logger.warning(f"    âŒ Not enough pre-allocated times! Need {hours_per_week}, got {len(times_to_use)}")
+            logger.warning(f"    Falling back to dynamic scheduling...")
+            return self._schedule_elective_course_dynamic(schedule, data, course, year, sections)
+        
+        # Schedule ALL sections at the SAME times
+        # CRITICAL: Only schedule if ALL sections can use the same time (maintain alignment)
+        scheduled_hours = 0
+        for mt in times_to_use:
+            # FIRST: Check if this time works for ALL sections
+            can_schedule_all = True
+            for section in sections:
+                if not self._can_schedule_single(schedule, section, course, mt, year=year):
+                    can_schedule_all = False
+                    logger.warning(f"    âš ï¸ Cannot use {mt.day} {mt.time} - conflict in Section {section}")
+                    break
+            
+            # SECOND: Only schedule if ALL sections are conflict-free
+            if can_schedule_all:
+                for section in sections:
+                    instructors = self._get_instructors(course, year, section)
+                    instructor = instructors[0] if instructors else None
+                    
+                    new_class = Class(year, section, course)
+                    new_class.set_meetingTime(mt)
+                    new_class.set_instructor(instructor)
+                    new_class.set_room(None)
+                    schedule._classes.append(new_class)
+                
+                scheduled_hours += 1
+                logger.debug(f"    âœ“ Scheduled hour {scheduled_hours}/{hours_per_week} for ALL sections at {mt.day} {mt.time}")
+            else:
+                logger.warning(f"    â­ï¸  Skipping {mt.day} {mt.time} - cannot schedule ALL sections (alignment required)")
+        
+        success = (scheduled_hours == hours_per_week)
+        if success:
+            logger.info(f"    âœ… ELECTIVE {course.course_number}: Successfully scheduled all {scheduled_hours} hours at SAME times for all sections")
+        else:
+            logger.warning(f"    âš ï¸ ELECTIVE {course.course_number}: Only scheduled {scheduled_hours}/{hours_per_week} hours")
+        
+        return success
+    
+    def _schedule_elective_course_dynamic(self, schedule, data, course, year, sections):
+        """
+        FALLBACK: Schedule ELECTIVE dynamically when pre-allocation fails.
+        Tries to find times that work for ALL sections.
+        """
         hours_per_week = course.hours_per_week
         max_continuous = course.max_continuous_hours if course.max_continuous_hours > 0 else hours_per_week
         meeting_times = list(data.get_meetingTimes())
+        
+        logger.info(f"    Dynamic scheduling ELECTIVE {course.course_number}: {hours_per_week}hrs")
         
         # Track hours per day AND time slot usage for spreading
         from collections import defaultdict
         day_hours = defaultdict(int)
         time_slot_usage = defaultdict(int)
         
+        scheduled_hours = 0
+        max_attempts = hours_per_week * len(meeting_times)  # Generous attempt limit
+        attempts = 0
+        
         # Find times that work for ALL sections
-        for _ in range(hours_per_week):
+        while scheduled_hours < hours_per_week and attempts < max_attempts:
+            attempts += 1
             best_time = None
-            min_conflicts = float('inf')
             
             # Sort to prefer days AND time slots with less usage
             def sort_key(mt):
@@ -1348,14 +1034,13 @@ class ConstraintScheduler:
             sorted_times = sorted(meeting_times, key=sort_key)
             
             for mt in sorted_times:
-                conflicts = 0
-                exceeds_consecutive = False
+                can_schedule_all = True
                 
                 # Check each section
                 for section in sections:
                     if not self._can_schedule_single(schedule, section, course, mt, year=year):
-                        conflicts += 1
-                        continue
+                        can_schedule_all = False
+                        break
                     
                     # Check if scheduling here would exceed max_continuous consecutive periods
                     consecutive_before = self._count_consecutive_before(schedule, section, course, mt)
@@ -1363,38 +1048,39 @@ class ConstraintScheduler:
                     total_consecutive = consecutive_before + consecutive_after + 1
                     
                     if total_consecutive > max_continuous:
-                        exceeds_consecutive = True
+                        can_schedule_all = False
                         break
-                
-                # Skip this time if it exceeds consecutive limit for any section
-                if exceeds_consecutive:
-                    continue
-                
-                if conflicts < min_conflicts:
-                    min_conflicts = conflicts
+
+                if can_schedule_all:
                     best_time = mt
-                
-                # If we found a slot with no conflicts, use it immediately
-                if min_conflicts == 0:
                     break
             
-            if best_time is None or min_conflicts > 0:
-                return False  # Can't find common time for all sections
-            
-            # Schedule for all sections at the same time
+            if best_time is None:
+                logger.warning(f"  ELECTIVE {course.course_number}: No valid time slot found after {attempts} attempts")
+                break  # No more valid slots available
+
+            # Schedule for all sections at the same time (strict alignment)
             for section in sections:
                 instructors = self._get_instructors(course, year, section)
-                instructor = instructors[0] if instructors else None  # Use first instructor
-                new_class = Class(year, section, course, batch='FULL')
+                instructor = instructors[0] if instructors else None
+                
+                new_class = Class(year, section, course)
                 new_class.set_meetingTime(best_time)
                 new_class.set_instructor(instructor)
                 new_class.set_room(None)
                 schedule._classes.append(new_class)
-            
+
             day_hours[best_time.day] += 1
             time_slot_usage[best_time.time] += 1
+            scheduled_hours += 1
+            logger.debug(f"  ELECTIVE {course.course_number}: Scheduled hour {scheduled_hours}/{hours_per_week} for ALL sections at {best_time.day} {best_time.time}")
         
-        return True
+        if scheduled_hours == hours_per_week:
+            logger.info(f"  âœ“ ELECTIVE {course.course_number}: Successfully scheduled all {scheduled_hours} hours")
+            return True
+        else:
+            logger.warning(f"  âš  ELECTIVE {course.course_number}: Only scheduled {scheduled_hours}/{hours_per_week} hours (will retry separately)")
+            return False  # Trigger separate section scheduling
     
     def _schedule_theory_course(self, schedule, data, course, year, section):
         """Schedule a THEORY course (spread across days AND time slots)"""
@@ -1409,7 +1095,7 @@ class ConstraintScheduler:
             return False
         instructor = instructors[0]  # Use first instructor
         
-        # ⭐ CRITICAL FIX FOR TP COURSES:
+        # â­ CRITICAL FIX FOR TP COURSES:
         # If hours_per_week == max_continuous_hours > 1, ALL hours MUST be continuous
         # Example: TP courses with 2hrs/week and max_continuous=2
         # These MUST be scheduled as ONE 2-hour block, NOT as separate 1-hour periods
@@ -1417,7 +1103,7 @@ class ConstraintScheduler:
             logger.info(f"    {course.course_number} Sec{section}: Scheduling as {max_continuous}-hour continuous block (TP course)")
             
             # Find continuous blocks
-            available_blocks = self._find_continuous_blocks(data, max_continuous)
+            available_blocks = self._find_continuous_blocks(data, max_continuous, instructor, year)
             logger.info(f"      Found {len(available_blocks)} continuous {max_continuous}-hour blocks")
             
             # Filter blocks without conflicts
@@ -1439,7 +1125,7 @@ class ConstraintScheduler:
                 logger.info(f"      [OK] Scheduling continuous block: {selected_block[0].day} {[mt.time for mt in selected_block]}")
                 
                 for mt in selected_block:
-                    new_class = Class(year, section, course, batch='FULL')
+                    new_class = Class(year, section, course)
                     new_class.set_meetingTime(mt)
                     new_class.set_instructor(instructor)
                     new_class.set_room(None)  # Theory courses don't use lab rooms
@@ -1450,56 +1136,121 @@ class ConstraintScheduler:
                 # FALLBACK: No continuous blocks available, try to schedule as separate periods
                 # This is not ideal but allows the schedule to be created
                 # The fitness function will penalize this heavily, but won't fail completely
-                logger.warning(f"      ⚠ No continuous blocks available for {course.course_number} Sec{section}")
-                logger.warning(f"      → Falling back to separate period scheduling (will be penalized in fitness)")
+                logger.warning(f"      âš  No continuous blocks available for {course.course_number} Sec{section}")
+                logger.warning(f"      â†’ Falling back to separate period scheduling (will be penalized in fitness)")
                 # Continue to regular scheduling below instead of returning False
         
-        # ⭐ REGULAR THEORY SCHEDULING (for courses that can be spread across days)
-        # This is the existing code for regular theory courses
+        # â­ REGULAR THEORY SCHEDULING (for courses that can be spread across days)
+        # SPREAD-ACROSS-DAYS STRATEGY WITH INSTRUCTOR PRIORITIES
+        # Limit max hours per day and prioritize spreading across multiple days
         scheduled_count = 0
         attempts = 0
         max_attempts = len(meeting_times) * 10
         
-        # Track hours per day AND time slot usage for better spreading
+        # Track hours scheduled per day
         from collections import defaultdict
         day_hours = defaultdict(int)
-        time_slot_usage = defaultdict(int)  # Track how many times each time slot is used
         
-        # Use day-spreading preference for first 60% of attempts, then relax
-        use_spreading = True
-        spreading_threshold = max_attempts * 0.6
+        logger.info(f"      {course.course_number} Sec{section}: Day-filling {hours_per_week} hrs (max {max_continuous} hrs/day) with instructor priorities")
         
-        while scheduled_count < hours_per_week and attempts < max_attempts:
-            attempts += 1
+        # Group meeting times by day
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        time_order = [t[0] for t in TIME_SLOTS]
+        
+        # Create a mapping of day -> sorted meeting times for that day
+        days_dict = defaultdict(list)
+        for mt in meeting_times:
+            days_dict[mt.day].append(mt)
+        
+        # Sort meeting times within each day by INSTRUCTOR PRIORITY
+        for day in days_dict:
+            days_dict[day] = self._sort_meeting_times_by_instructor_priority(days_dict[day], instructor, year)
+            logger.debug(f"        {day}: Sorted by instructor priority")
+        
+        logger.info(f"      {course.course_number} Sec{section}: Starting DAY-FILLING (max {max_continuous} hrs/day per course) with instructor priorities")
+        
+        # â­ DAY-FILLING STRATEGY: Process days sequentially, fill each up to max_continuous_hours
+        # Within each day, times are sorted by instructor priority (1=highest preference)
+        # This ensures courses are distributed across multiple days instead of clustering on one day
+        for day in day_order:
+            if scheduled_count >= hours_per_week:
+                break  # All hours scheduled
             
-            # After many failed attempts, switch from spreading to chronological
-            if attempts > spreading_threshold and use_spreading:
-                use_spreading = False
-                logger.debug(f"      {course.course_number} Sec{section}: Relaxing spreading constraint (attempt {attempts})")
+            if day not in days_dict:
+                continue  # No meeting times for this day
             
-            # Sort times: spread across BOTH days AND time slots
-            if use_spreading:
-                def sort_key(mt):
-                    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-                    time_order = [t[0] for t in TIME_SLOTS]
-                    return (
-                        day_hours[mt.day],  # Prefer days with fewer hours (primary)
-                        time_slot_usage[mt.time],  # Prefer time slots not yet used (secondary)
-                        day_order.index(mt.day) if mt.day in day_order else 999,
-                        time_order.index(mt.time) if mt.time in time_order else 999
-                    )
-                sorted_times = sorted(meeting_times, key=sort_key)
-            else:
-                # Fall back to chronological only
-                sorted_times = self._sort_meeting_times_chronologically(meeting_times)
+            logger.debug(f"        Attempting to fill {day}...")
             
-            # Find available time slot
-            for mt in sorted_times:
-                # Check if we can schedule here without exceeding consecutive limit
+            # Try to schedule as many hours as possible on this day (up to max_continuous limit)
+            for mt in days_dict[day]:
+                if scheduled_count >= hours_per_week:
+                    break  # All hours scheduled
+                
+                # â­â­ CRITICAL: Check day limit FIRST (cannot exceed max_continuous_hours on any day)
+                if day_hours[day] >= max_continuous:
+                    logger.debug(f"          Day limit reached: {day} already has {day_hours[day]} hours (max={max_continuous})")
+                    break  # Move to next day
+                
+                # Check if we can schedule here (instructor free, no conflicts)
                 if not self._can_schedule_single(schedule, section, course, mt, instructor, year):
                     continue
                 
-                # Count consecutive hours already scheduled for this course on this day
+                # Count consecutive hours
+                consecutive_before = self._count_consecutive_before(schedule, section, course, mt)
+                consecutive_after = self._count_consecutive_after(schedule, section, course, mt)
+                total_consecutive = consecutive_before + consecutive_after + 1
+                
+                # Skip if adding this would exceed max_continuous_hours in consecutive slots
+                if total_consecutive > max_continuous:
+                    logger.debug(f"          {mt.time}: Skipped (would exceed consecutive max={max_continuous})")
+                    continue
+                
+                # â­ Schedule it
+                new_class = Class(year, section, course)
+                new_class.set_meetingTime(mt)
+                new_class.set_instructor(instructor)
+                new_class.set_room(None)
+                schedule._classes.append(new_class)
+                scheduled_count += 1
+                day_hours[day] += 1
+                logger.debug(f"          {mt.time}: Scheduled ({scheduled_count}/{hours_per_week} total, {day_hours[day]} on {day})")
+            
+            if day_hours[day] > 0:
+                logger.info(f"        {day}: Scheduled {day_hours[day]} period(s)")
+        
+        # Check if day-filling completed all hours
+        if scheduled_count < hours_per_week:
+            logger.warning(f"        Day-filling completed {scheduled_count}/{hours_per_week} hours - starting gap-filling")
+        else:
+            logger.info(f"        Day-filling SUCCESS: All {scheduled_count} hours scheduled")
+        
+        # â­ GAP-FILLING PHASE: If not all hours scheduled, fill remaining gaps
+        # Ignore day limits and just fill ANY available slot where instructor is free
+        if scheduled_count < hours_per_week:
+            logger.info(f"      ðŸ”§ GAP-FILLING PHASE 1: {hours_per_week - scheduled_count} hours remaining, filling gaps (respecting max continuous)")
+            
+            # Flatten all meeting times from all days
+            all_meeting_times = []
+            for day in day_order:
+                if day in days_dict:
+                    all_meeting_times.extend(days_dict[day])
+            
+            # PASS 1: Try to schedule remaining hours while respecting max_continuous_hours
+            for mt in all_meeting_times:
+                if scheduled_count >= hours_per_week:
+                    break  # All hours scheduled
+                
+                # Check if we can schedule here (instructor free, no conflicts)
+                if not self._can_schedule_single(schedule, section, course, mt, instructor, year):
+                    continue
+                
+                # â­ NEW: Check total hours on this day (cannot exceed max_continuous_hours)
+                hours_on_day = day_hours[mt.day]
+                if hours_on_day >= max_continuous:
+                    logger.debug(f"          {mt.day} {mt.time}: Day limit reached ({hours_on_day}/{max_continuous})")
+                    continue
+                
+                # Count consecutive hours
                 consecutive_before = self._count_consecutive_before(schedule, section, course, mt)
                 consecutive_after = self._count_consecutive_after(schedule, section, course, mt)
                 total_consecutive = consecutive_before + consecutive_after + 1
@@ -1508,22 +1259,198 @@ class ConstraintScheduler:
                 if total_consecutive > max_continuous:
                     continue
                 
-                # Schedule it
-                new_class = Class(year, section, course, batch='FULL')
+                # â­ Schedule it (respecting both day limits and consecutive limits!)
+                new_class = Class(year, section, course)
                 new_class.set_meetingTime(mt)
                 new_class.set_instructor(instructor)
                 new_class.set_room(None)
                 schedule._classes.append(new_class)
                 scheduled_count += 1
                 day_hours[mt.day] += 1
-                time_slot_usage[mt.time] += 1
-                logger.debug(f"      {course.course_number} Sec{section}: {mt.day} {mt.time} (day: {day_hours[mt.day]}, time used: {time_slot_usage[mt.time]}x, consecutive: {total_consecutive}/{max_continuous})")
-                break
+                logger.debug(f"          GAP-FILL Pass1: {mt.day} {mt.time} - {scheduled_count}/{hours_per_week}")
+        
+        # â­â­ ULTRA-RELAXED GAP-FILLING PHASE 2: Ignore consecutive constraint but RESPECT day limit
+        # If STILL not fully scheduled, allow non-consecutive scheduling but respect max hours per day
+        if scheduled_count < hours_per_week:
+            logger.warning(f"      ðŸ”§ðŸ”§ GAP-FILLING PHASE 2 (ULTRA-RELAXED): {hours_per_week - scheduled_count} hours still missing, ignoring consecutive constraint but respecting day limit")
+            
+            # Flatten all meeting times again
+            all_meeting_times = []
+            for day in day_order:
+                if day in days_dict:
+                    all_meeting_times.extend(days_dict[day])
+            
+            # PASS 2: Schedule remaining hours WITHOUT checking consecutive hours but WITH day limit
+            for mt in all_meeting_times:
+                if scheduled_count >= hours_per_week:
+                    break  # All hours scheduled
+                
+                # Check conflicts
+                if not self._can_schedule_single(schedule, section, course, mt, instructor, year):
+                    continue
+                
+                # â­â­ CRITICAL: Still respect day limit (max_continuous_hours per day)
+                hours_on_day = day_hours[mt.day]
+                if hours_on_day >= max_continuous:
+                    logger.debug(f"          {mt.day} {mt.time}: Day limit reached ({hours_on_day}/{max_continuous})")
+                    continue
+                
+                # â­â­ RELAX: Don't check if consecutive - just fill the gap!
+                # This allows courses to be scheduled non-consecutively if needed
+                
+                # Schedule it!
+                new_class = Class(year, section, course)
+                new_class.set_meetingTime(mt)
+                new_class.set_instructor(instructor)
+                new_class.set_room(None)
+                schedule._classes.append(new_class)
+                scheduled_count += 1
+                day_hours[mt.day] += 1
+                logger.debug(f"          GAP-FILL Pass2 (RELAXED): {mt.day} {mt.time} - {scheduled_count}/{hours_per_week}")
+        
+        # Log summary
+        for day in day_order:
+            if day_hours[day] > 0:
+                logger.info(f"        {day}: {day_hours[day]} period(s)")
         
         if scheduled_count < hours_per_week:
-            logger.warning(f"    {course.course_number} Sec{section}: Only scheduled {scheduled_count}/{hours_per_week} hours")
+            logger.warning(f"    {course.course_number} Sec{section}: Only scheduled {scheduled_count}/{hours_per_week} hours (INCOMPLETE)")
+        else:
+            logger.info(f"    {course.course_number} Sec{section}: Successfully scheduled all {scheduled_count} hours")
         
         return scheduled_count == hours_per_week
+    
+    def _schedule_theory_course_relaxed(self, schedule, data, course, year, section):
+        """
+        RELAXED scheduling for gap-filling.
+        Relaxes placement rules but still prefers instructor-priority slots.
+        Use this as a fallback when strict scheduling fails.
+        """
+        hours_per_week = course.hours_per_week
+        max_continuous = course.max_continuous_hours if course.max_continuous_hours > 0 else hours_per_week
+        meeting_times = list(data.get_meetingTimes())
+        
+        # Get instructor
+        instructors = self._get_instructors(course, year, section)
+        if not instructors:
+            logger.warning(f"    No instructors for {course.course_number} Sec {section}")
+            return False
+        instructor = instructors[0]
+        
+        logger.info(f"  ðŸ”§ RELAXED SCHEDULING: {course.course_number} Sec{section} - filling ANY available slots")
+        
+        scheduled_count = 0
+        
+        # Try all meeting times in priority order and spread across days.
+        from collections import defaultdict
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        day_hours = defaultdict(int)
+        
+        # Group by day
+        days_dict = defaultdict(list)
+        for mt in meeting_times:
+            days_dict[mt.day].append(mt)
+        
+        # Sort times by instructor priority within each day
+        for day in days_dict:
+            days_dict[day] = self._sort_meeting_times_by_instructor_priority(days_dict[day], instructor, year)
+        
+        # Fill across days evenly (day-filling but simpler)
+        max_per_day = (hours_per_week // len(day_order)) + 1  # Spread evenly
+        
+        for day in day_order:
+            if scheduled_count >= hours_per_week:
+                break
+            
+            if day not in days_dict:
+                continue
+            
+            for mt in days_dict[day]:
+                if scheduled_count >= hours_per_week:
+                    break
+                
+                # Don't overfill one day
+                if day_hours[day] >= max_per_day and scheduled_count < hours_per_week - 1:
+                    continue
+                
+                # Check if we can schedule here
+                if not self._can_schedule_single(schedule, section, course, mt, instructor, year):
+                    continue
+                
+                # Check consecutive limit
+                consecutive_before = self._count_consecutive_before(schedule, section, course, mt)
+                consecutive_after = self._count_consecutive_after(schedule, section, course, mt)
+                total_consecutive = consecutive_before + consecutive_after + 1
+                
+                if total_consecutive > max_continuous:
+                    continue
+                
+                # Schedule it!
+                new_class = Class(year, section, course)
+                new_class.set_meetingTime(mt)
+                new_class.set_instructor(instructor)
+                new_class.set_room(None)
+                schedule._classes.append(new_class)
+                scheduled_count += 1
+                day_hours[day] += 1
+                logger.debug(f"    Relaxed: {day} {mt.time} - {scheduled_count}/{hours_per_week}")
+        
+        if scheduled_count == hours_per_week:
+            logger.info(f"  âœ“ RELAXED: Successfully scheduled all {scheduled_count} hours")
+            return True
+        else:
+            logger.error(f"  âŒ RELAXED FAILED: Only {scheduled_count}/{hours_per_week} hours scheduled")
+            return False
+    
+    def _force_schedule_single_hour(self, schedule, data, course, year, section):
+        """
+        ULTRA-AGGRESSIVE: Schedule a single hour in ANY available slot.
+        Relaxes day distribution and consecutive constraint, while still preferring priorities.
+        BUT STILL RESPECTS max_continuous_hours as a day limit.
+        Used as absolute last resort for gap-filling.
+        """
+        instructors = self._get_instructors(course, year, section)
+        if not instructors:
+            return False
+        instructor = instructors[0]
+        
+        meeting_times = self._sort_meeting_times_by_instructor_priority(list(data.get_meetingTimes()), instructor, year)
+        max_continuous = course.max_continuous_hours
+        
+        # Count current hours per day for this course
+        from collections import defaultdict
+        day_hours = defaultdict(int)
+        for cls in schedule._classes:
+            if (cls.section_number == section and 
+                cls.course == course):
+                day_hours[cls.meeting_time.day] += 1
+        
+        # Try EVERY possible time slot
+        for mt in meeting_times:
+            # Check basic conflicts
+            if not self._can_schedule_single(schedule, section, course, mt, instructor, year):
+                continue
+            
+            # â­ CRITICAL: Respect day limit (cannot exceed max_continuous_hours per day)
+            if day_hours[mt.day] >= max_continuous:
+                logger.debug(f"    Force-schedule skip {mt.day} {mt.time}: Day limit reached ({day_hours[mt.day]}/{max_continuous})")
+                continue
+            
+            # â­â­ RELAXED: Skip consecutive hours check (can be non-consecutive)
+            # But we still respect the total hours per day limit
+            
+            # SCHEDULE IT!
+            new_class = Class(year, section, course)
+            new_class.set_meetingTime(mt)
+            new_class.set_instructor(instructor)
+            new_class.set_room(None)
+            schedule._classes.append(new_class)
+            logger.debug(f"    Force-scheduled (non-consecutive OK, day limit respected): {mt.day} {mt.time}")
+            return True
+        
+        # Could not find ANY valid slot
+        logger.warning(f"    Force-schedule failed: All days at max limit ({max_continuous} hrs/day)")
+        return False
     
     def _count_consecutive_before(self, schedule, section, course, meeting_time):
         """Count consecutive periods before this time slot for the same course"""
@@ -1585,7 +1512,7 @@ class ConstraintScheduler:
         
         return count
     
-    def _find_continuous_blocks(self, data, hours_needed):
+    def _find_continuous_blocks(self, data, hours_needed, instructor=None, year=None):
         """Find all continuous time blocks of given length"""
         meeting_times = list(data.get_meetingTimes())
         day_groups = {}
@@ -1609,6 +1536,28 @@ class ConstraintScheduler:
                 # Verify continuity (no lunch break in middle)
                 if self._is_continuous_block(block):
                     blocks.append(block)
+
+        # Prefer blocks that match instructor priorities when available.
+        if instructor and blocks:
+            day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+            time_order = [t[0] for t in TIME_SLOTS]
+            priority_lookup = self._get_instructor_priority_lookup(instructor)
+
+            def block_key(block):
+                priority_values = []
+                for mt in block:
+                    period = self._get_teaching_period_number(mt.time, year)
+                    day_priorities = priority_lookup.get(mt.day, {})
+                    priority_values.append(day_priorities.get(period, 999) if period else 999)
+
+                avg_priority = sum(priority_values) / len(priority_values) if priority_values else 999
+                return (
+                    avg_priority,
+                    day_order.index(block[0].day) if block[0].day in day_order else 999,
+                    time_order.index(block[0].time) if block[0].time in time_order else 999
+                )
+
+            blocks.sort(key=block_key)
         
         return blocks
     
@@ -1716,7 +1665,7 @@ class ConstraintScheduler:
         return True
     
     def _schedule_special_periods(self, schedule, data, year, sections):
-        """Schedule special periods (Counseling, Training, Sports/Library) - applies to all sections"""
+        """Schedule special periods (Counseling, Training, Sports, Library) - applies to all sections"""
         from .models import SpecialPeriod
         
         # Get all special periods configured for this year
@@ -1730,7 +1679,7 @@ class ConstraintScheduler:
         
         # Create pseudo-courses for special periods if they don't exist
         special_courses = {}
-        for period_type in ['Counseling', 'Training', 'Sports/Library']:
+        for period_type in ['Counseling', 'Training', 'Sports', 'Library']:
             course, created = Course.objects.get_or_create(
                 course_number=period_type.upper().replace('/', '_'),
                 defaults={
@@ -1778,14 +1727,14 @@ class ConstraintScheduler:
         instructor = special_period.instructor
         
         # Find continuous blocks
-        available_blocks = self._find_continuous_blocks(data, hours_needed)
+        available_blocks = self._find_continuous_blocks(data, hours_needed, instructor, year)
         
         # Filter blocks that don't conflict
         for block in available_blocks:
             if self._can_schedule_block(schedule, section, course, block, instructor, year, None):
                 # Schedule the block
                 for mt in block:
-                    new_class = Class(year, section, course, batch='FULL')
+                    new_class = Class(year, section, course)
                     new_class.set_meetingTime(mt)
                     new_class.set_instructor(instructor)
                     new_class.set_room(None)
@@ -1795,17 +1744,16 @@ class ConstraintScheduler:
         return False
     
     def _schedule_special_single(self, schedule, data, special_period, course, year, section):
-        """Schedule a single-hour special period (e.g., Counseling, Sports/Library)"""
+        """Schedule a single-hour special period (e.g., Counseling, Sports, Library)"""
         instructor = special_period.instructor
         meeting_times = list(data.get_meetingTimes())
         
-        # Try to find an available slot (prefer later periods for special periods)
-        sorted_times = self._sort_meeting_times_chronologically(meeting_times)
-        sorted_times.reverse()  # Prefer later time slots for special periods
+        # Try to find an available slot honoring instructor priorities.
+        sorted_times = self._sort_meeting_times_by_instructor_priority(meeting_times, instructor, year)
         
         for mt in sorted_times:
             if self._can_schedule_single(schedule, section, course, mt, instructor, year):
-                new_class = Class(year, section, course, batch='FULL')
+                new_class = Class(year, section, course)
                 new_class.set_meetingTime(mt)
                 new_class.set_instructor(instructor)
                 new_class.set_room(None)
@@ -1853,6 +1801,7 @@ class ConstraintScheduler:
     def _get_available_evaluators(self, schedule, block, course, main_instructor, year=None, max_evaluators=2):
         """
         Auto-select available evaluators from the same department.
+        ONLY Assistant Professors can be selected as evaluators.
         Returns list of instructors who are free during the given time block.
         Tries to get max_evaluators, but returns fewer if not enough are available.
         Checks BOTH current schedule AND existing database entries (for single-year regeneration).
@@ -1877,11 +1826,15 @@ class ConstraintScheduler:
                 if assignment.main_instructor:
                     excluded_instructors.add(assignment.main_instructor)
         
-        # Get all instructors from this department (using department field)
-        dept_instructors = list(Instructor.objects.filter(department=dept_code))
+        # Get all ASSISTANT PROFESSOR instructors from this department
+        # CRITICAL: Only Assistant Professors can be evaluators
+        dept_instructors = list(Instructor.objects.filter(
+            department=dept_code,
+            designation='ASST_PROF'  # Only Assistant Professors
+        ))
         
         if not dept_instructors:
-            logger.warning(f"    No instructors found for department {dept_code}")
+            logger.warning(f"    No Assistant Professor instructors found for department {dept_code}")
             return []
         
         # Randomize order to distribute evaluators more evenly across different labs
@@ -1934,43 +1887,139 @@ class ConstraintScheduler:
         labs = list(course.lab_rooms.all())
         return random.choice(labs) if labs else None
 
+def generate_all_years(request):
+    """Generate timetables for all years at once"""
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'error': 'Authentication required. Please login and try again.'
+        }, status=401)
 
-# REMOVE OLD GA CLASS - NOT NEEDED!
-class GeneticAlgorithm:
-    """DEPRECATED - Using constraint-based scheduling instead"""
-    pass
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST request required'}, status=400)
+    
+    years = Year.objects.all().order_by('id')
+    total_years = years.count()
+    success_count = 0
+    failed_years = []
+    results = []
+
+    # Clear stale generated data first so cross-year conflict checks use only fresh runs.
+    TimetableEntry.objects.all().delete()
+    GeneratedTimetable.objects.all().delete()
+    
+    for year in years:
+        try:
+            # Create data for this year
+            year_data = Data(year)
+            year_data.elective_time_tracker = {}
+            
+            # Generate new timetable using constraint scheduler (retry hard-constraint failures)
+            scheduler = ConstraintScheduler()
+            schedule = None
+            used_attempt = 0
+            for attempt in range(1, MAX_ATTEMPTS + 1):
+                schedule = scheduler.build_schedule(year_data, year)
+                if schedule:
+                    used_attempt = attempt
+                    break
+            
+            if schedule:
+                # Calculate fitness and conflicts
+                conflicts = schedule.getNumbOfConflicts()
+                fitness = schedule.getFitness()
+                
+                # Save to database
+                generated_timetable = GeneratedTimetable.objects.create(
+                    year=year,
+                    fitness_score=fitness,
+                    generation_count=used_attempt or 1
+                )
+                
+                # Save all timetable entries
+                entry_count = 0
+                for cls in schedule.getClasses():
+                    # Match the logic from the regular timetable() function
+                    # For LAB courses with multiple instructors (non-split), use is_evaluator flag from Class object
+                    if cls.course.course_type == 'LAB':
+                        TimetableEntry.objects.update_or_create(
+                            timetable=generated_timetable,
+                            year=year,
+                            section_number=cls.section_number,
+                            course=cls.course,
+                            instructor=cls.instructor,
+                            meeting_time=cls.meeting_time,
+                            defaults={
+                                'lab_room': cls.room if hasattr(cls, 'room') else None,
+                                'is_evaluator': cls.is_evaluator
+                            }
+                        )
+                        entry_count += 1
+                    else:
+                        # For THEORY/ELECTIVE courses: single instructor entry
+                        TimetableEntry.objects.get_or_create(
+                            timetable=generated_timetable,
+                            year=year,
+                            section_number=cls.section_number,
+                            course=cls.course,
+                            instructor=cls.instructor,
+                            lab_room=None,
+                            meeting_time=cls.meeting_time,
+                            defaults={'is_evaluator': False}
+                        )
+                        entry_count += 1
+                
+                # Get allocation report for diagnostics
+                alloc_report = schedule.get_allocation_report()
+                
+                # Determine if schedule is fully allocated
+                is_fully_allocated = (alloc_report and 
+                                     alloc_report['incomplete_count'] == 0)
+                
+                # Log incomplete courses for debugging
+                if alloc_report and alloc_report['incomplete_list']:
+                    logger.warning(f"âš ï¸ {year.year_name} has {alloc_report['incomplete_count']} under-allocated course-sections:")
+                    for item in alloc_report['incomplete_list']:
+                        logger.warning(f"   {item['course']} Sec{item['section']}: {item['got']}/{item['need']} hours")
+                
+                results.append({
+                    'year': year.year_name,
+                    'success': True,
+                    'classes': len(schedule.getClasses()),
+                    'conflicts': conflicts,
+                    'fitness': f"{fitness:.2%}",
+                    'fully_allocated': is_fully_allocated,
+                    'allocation': {
+                        'delivered': alloc_report['total_delivered'] if alloc_report else 0,
+                        'needed': alloc_report['total_needed'] if alloc_report else 0,
+                        'complete_courses': alloc_report['complete'] if alloc_report else 0,
+                        'incomplete_courses': alloc_report['incomplete_count'] if alloc_report else 0
+                    }
+                })
+                success_count += 1
+            else:
+                results.append({
+                    'year': year.year_name,
+                    'success': False,
+                    'error': 'Could not generate schedule'
+                })
+                failed_years.append(year.year_name)
+        
+        except Exception as e:
+            results.append({
+                'year': year.year_name,
+                'success': False,
+                'error': str(e)
+            })
+            failed_years.append(year.year_name)
+    
+    return JsonResponse({
+        'total': total_years,
+        'success': success_count,
+        'failed': len(failed_years),
+        'results': results
+    })
 
 
-
-def context_manager(schedule):
-    classes = schedule.getClasses()
-    context = []
-    for i in range(len(classes)):
-        clas = {}
-        clas['section'] = classes[i].section_number
-        clas['year'] = classes[i].year.year_name
-        clas['course'] = f'{classes[i].course.course_name} ({classes[i].course.course_number} {classes[i].course.max_numb_students})'
-        clas['room'] = 'Manual Assignment'
-        clas['instructor'] = f'{classes[i].instructor.name} ({classes[i].instructor.uid})'
-        clas['meeting_time'] = [
-            classes[i].meeting_time.pid,
-            classes[i].meeting_time.day,
-            classes[i].meeting_time.time
-        ]
-        context.append(clas)
-    return context
-
-
-def apiGenNum(request):
-    return JsonResponse({'genNum': VARS['generationNum']})
-
-def apiterminateGens(request):
-    VARS['terminateGens'] = True
-    return redirect('home')
-
-
-
-@login_required
 def timetable(request):
     global data
     
@@ -1995,21 +2044,11 @@ def timetable(request):
         # Load existing timetable from database
         entries = TimetableEntry.objects.filter(timetable=existing_timetable)
         
-        # CRITICAL: Deduplicate entries for multi-instructor labs (but NOT for batch-split labs)
-        # Key: (section, course, day, time, batch) → entry
-        seen = {}
-        unique_entries = []
-        for entry in entries:
-            # Include batch in the key to keep B1 and B2 separate
-            key = (entry.section_number, entry.course_id, entry.meeting_time.day, entry.meeting_time.time, entry.batch)
-            if key not in seen:
-                seen[key] = entry
-                unique_entries.append(entry)
-        
         # Convert to class objects for template compatibility
+        # DO NOT deduplicate - we need all instructor entries for multi-instructor labs
         classes = []
-        for entry in unique_entries:
-            cls = Class(entry.year, entry.section_number, entry.course, batch=entry.batch)
+        for entry in entries:
+            cls = Class(entry.year, entry.section_number, entry.course)
             cls.set_instructor(entry.instructor)
             cls.set_meetingTime(entry.meeting_time)
             cls.room = entry.lab_room  # Only lab rooms are stored
@@ -2036,69 +2075,169 @@ def timetable(request):
     
     # PRE-ALLOCATE elective times BEFORE creating population
     # This ensures ALL schedules use the same times for electives
+    # Include: course_type='ELECTIVE' OR courses that need alignment (OE/PE by number)
     all_courses = selected_year.courses.all()
-    elective_courses = all_courses.filter(course_type='ELECTIVE')
+    
+    # Helper: Identify courses needing alignment (same time for all sections)
+    def needs_section_alignment(course):
+        """Check if course should be scheduled at same time for all sections"""
+        # LAB courses are NEVER aligned - they have batches and separate scheduling
+        if course.course_type == 'LAB':
+            return False
+        
+        # CHECK: If same instructor teaches multiple sections, DON'T force alignment
+        try:
+            from SchedulerApp.models import CourseInstructorAssignment
+            assignments = CourseInstructorAssignment.objects.filter(course=course)
+            if assignments.exists():
+                instructors_per_section = {}
+                for a in assignments:
+                    inst_ids = set(a.instructors.values_list('id', flat=True))
+                    if a.section_number not in instructors_per_section:
+                        instructors_per_section[a.section_number] = inst_ids
+                    else:
+                        instructors_per_section[a.section_number].update(inst_ids)
+                
+                all_instructors = set()
+                for section_insts in instructors_per_section.values():
+                    intersection = all_instructors & section_insts
+                    if intersection:
+                        return False
+                    all_instructors.update(section_insts)
+        except:
+            pass
+        
+        # ELECTIVE course type always needs alignment
+        if course.course_type == 'ELECTIVE':
+            return True
+        # OE (Open Elective) - starts with 23IT6 or 23IT7 (6xxx/7xxx are elective codes)
+        if course.course_number.startswith('23IT6') or course.course_number.startswith('23IT7'):
+            return True
+        # PE (Professional Elective) - 23IT5xxx series (THEORY courses only, not labs)
+        if course.course_number.startswith('23IT5') and course.course_type != 'LAB':
+            return True
+        return False
+    
+    # Get all courses that need alignment
+    elective_courses = [c for c in all_courses if needs_section_alignment(c)]
     meeting_times = list(MeetingTime.objects.filter(year=selected_year))
     
-    logger.info(f"Pre-allocating times for {elective_courses.count()} elective courses...")
-    
+    logger.info(f"Pre-allocating times for {len(elective_courses)} courses needing section alignment...")
+    logger.info(f"  Aligned courses: {[c.course_number for c in elective_courses]}")
+
     if meeting_times:
+        global_used_times = []
         for course in elective_courses:
             # Calculate how many hours need single periods vs continuous
             total_hours = course.hours_per_week
             continuous_hours = course.max_continuous_hours if course.max_continuous_hours > 1 else 0
             single_hours = total_hours - continuous_hours
-            
+
             # Track times used for continuous blocks to avoid overlap
             used_times = []
-            
+
             # FIRST: Pre-allocate continuous block(s) if needed
             if continuous_hours > 0:
                 # Group meeting times by day and find valid continuous blocks
                 day_groups = {}
                 for mt in meeting_times:
-                    day_groups.setdefault(mt.day, []).append(mt)
-                
+                    if mt not in global_used_times:
+                        day_groups.setdefault(mt.day, []).append(mt)
+
                 for day in day_groups:
                     day_groups[day].sort(key=lambda x: TIME_SLOTS.index((x.time, x.time)))
-                
+
                 valid_blocks = []
                 for day, times in day_groups.items():
                     for i in range(len(times) - course.max_continuous_hours + 1):
                         block = times[i:i + course.max_continuous_hours]
                         if not any(t.time == "12:15 - 1:05" for t in block):
-                            valid_blocks.append(block)
-                
+                            is_contiguous = True
+                            for j in range(len(block)-1):
+                                idx1 = TIME_SLOTS.index((block[j].time, block[j].time))
+                                idx2 = TIME_SLOTS.index((block[j+1].time, block[j+1].time))
+                                if idx2 != idx1 + 1:
+                                    is_contiguous = False
+                                    break
+                            if is_contiguous:
+                                valid_blocks.append(block)
+
                 if valid_blocks:
                     block_key = f"{course.course_number}_continuous"
+                    import random
                     selected_block = random.choice(valid_blocks)
                     data.elective_time_tracker[block_key] = selected_block
                     logger.info(f"  {course.course_number} continuous: {selected_block[0].day} {[mt.time for mt in selected_block]}")
-                    # Track these times as used to avoid overlap
                     used_times.extend(selected_block)
-            
+                    global_used_times.extend(selected_block)
+
             # SECOND: Pre-allocate single period times from REMAINING times (exclude continuous block times)
             if single_hours > 0:
-                available_times = [mt for mt in meeting_times if mt not in used_times]
+                available_times = [mt for mt in meeting_times if mt not in used_times and mt not in global_used_times]
                 if len(available_times) >= single_hours:
                     single_key = f"{course.course_number}_single"
-                    # Allocate MULTIPLE times for multiple addCourse() calls
-                    # All sections will use these SAME times in the SAME order
-                    selected_times = random.sample(available_times, single_hours)
+                    import random
+                    def fragmentation_score(mt):
+                        if mt.time in ['8:45 - 9:45', '11:25 - 12:15', '1:05 - 1:55', '2:45 - 3:35']: return random.randint(0,10)
+                        if mt.time in ['9:45 - 10:35', '10:35 - 11:25', '1:55 - 2:45']: return 100 + random.randint(0,10)
+                        return 50
+                    available_times.sort(key=fragmentation_score)
+                    selected_times = available_times[:single_hours]
                     data.elective_time_tracker[single_key] = selected_times  # Store as LIST
+                    global_used_times.extend(selected_times)
                     logger.info(f"  {course.course_number} single ({single_hours} periods): {[(t.day, t.time) for t in selected_times]}")
-                    
+
                     # Also create index tracker for each section
                     index_key = f"{course.course_number}_single_index"
                     data.elective_time_tracker[index_key] = {}
 
     # Log courses ONCE before scheduling
+    # Helper: Identify courses needing alignment (same time for all sections)
+    def needs_section_alignment(course):
+        """Check if course should be scheduled at same time for all sections"""
+        # LAB courses are NEVER aligned - they have batches and separate scheduling
+        if course.course_type == 'LAB':
+            return False
+        
+        # CHECK: If same instructor teaches multiple sections, DON'T force alignment
+        try:
+            from SchedulerApp.models import CourseInstructorAssignment
+            assignments = CourseInstructorAssignment.objects.filter(course=course)
+            if assignments.exists():
+                instructors_per_section = {}
+                for a in assignments:
+                    inst_ids = set(a.instructors.values_list('id', flat=True))
+                    if a.section_number not in instructors_per_section:
+                        instructors_per_section[a.section_number] = inst_ids
+                    else:
+                        instructors_per_section[a.section_number].update(inst_ids)
+                
+                all_instructors = set()
+                for section_insts in instructors_per_section.values():
+                    intersection = all_instructors & section_insts
+                    if intersection:
+                        return False
+                    all_instructors.update(section_insts)
+        except:
+            pass
+        
+        # ELECTIVE type courses always need alignment
+        if course.course_type == 'ELECTIVE':
+            return True
+        # OE (Open Elective) - 23IT6xxx or 23IT7xxx (THEORY courses only)
+        if course.course_number.startswith('23IT6') or course.course_number.startswith('23IT7'):
+            return True
+        # PE (Professional Elective) - 23IT5xxx (THEORY courses only, not labs)
+        if course.course_number.startswith('23IT5') and course.course_type != 'LAB':
+            return True
+        return False
+    
     all_courses = selected_year.courses.all()
     lab_courses = list(all_courses.filter(course_type='LAB').order_by('-priority'))
-    elective_courses = list(all_courses.filter(course_type='ELECTIVE').order_by('-priority'))
-    all_theory = all_courses.filter(course_type='THEORY').order_by('-priority')
-    continuous_theory_courses = list(all_theory.filter(max_continuous_hours__gt=1))
-    regular_theory_courses = list(all_theory.filter(max_continuous_hours=1))
+    elective_courses = [c for c in all_courses if needs_section_alignment(c)]
+    all_theory_excluding_aligned = [c for c in all_courses.filter(course_type='THEORY') if c not in elective_courses]
+    continuous_theory_courses = list([c for c in all_theory_excluding_aligned if c.max_continuous_hours > 1])
+    regular_theory_courses = list([c for c in all_theory_excluding_aligned if c.max_continuous_hours == 1])
     
     logger.info("=== COURSES TO BE SCHEDULED ===")
     logger.info(f"LAB ({len(lab_courses)}): {[c.course_number for c in lab_courses]}")
@@ -2117,24 +2256,16 @@ def timetable(request):
         schedule = scheduler.build_schedule(data, selected_year)
         
         if schedule:
-            # SUCCESS: Schedule was created (even if not perfect)
-            # The fitness score will reflect quality issues like non-continuous TP courses
+            # SUCCESS: Schedule passed all hard constraints (including TP continuity)
             conflicts = schedule.getNumbOfConflicts()
             fitness = schedule.getFitness()
             
-            # Optional: Check if TP courses are continuous (soft check, doesn't reject)
-            tp_continuous = schedule.validate_continuous_theory_strict()
-            if not tp_continuous:
-                logger.warning(f"[WARN] Attempt {attempt}: TP courses not all continuous (fitness: {fitness:.2%}, conflicts: {conflicts})")
-            else:
-                logger.info(f"[OK] Attempt {attempt}: TP courses are continuous (fitness: {fitness:.2%}, conflicts: {conflicts})")
-            
-            # Accept any schedule that was successfully created
-            # Prefer schedules with better fitness, but don't reject imperfect ones
+            logger.info(f"[OK] Attempt {attempt}: TP courses are continuous (fitness: {fitness:.2%}, conflicts: {conflicts})")
+
             logger.info(f"SUCCESS on attempt {attempt}! Schedule created with {len(schedule.getClasses())} classes")
             break
         else:
-            logger.warning(f"✗ Attempt {attempt} failed, retrying...")
+            logger.warning(f"âœ— Attempt {attempt} failed hard constraints (including TP continuity), retrying...")
     
     if not schedule:
         logger.error(f"FAILED to create schedule after {MAX_ATTEMPTS} attempts")
@@ -2143,17 +2274,9 @@ def timetable(request):
         if existing_timetable:
             entries = TimetableEntry.objects.filter(timetable=existing_timetable)
             
-            # Deduplicate entries for multi-instructor labs
-            seen = {}
-            unique_entries = []
-            for entry in entries:
-                key = (entry.section_number, entry.course_id, entry.meeting_time.day, entry.meeting_time.time)
-                if key not in seen:
-                    seen[key] = entry
-                    unique_entries.append(entry)
-            
+            # DO NOT deduplicate - we need all instructor entries for multi-instructor labs
             classes = []
-            for entry in unique_entries:
+            for entry in entries:
                 cls = Class(entry.year, entry.section_number, entry.course)
                 cls.set_instructor(entry.instructor)
                 cls.set_meetingTime(entry.meeting_time)
@@ -2212,47 +2335,8 @@ def timetable(request):
     
     # Save all class entries
     for cls in schedule.getClasses():
-        # For LAB courses with batch splitting, save batch info and create entries for all instructors
-        if cls.course.split_into_batches and cls.batch != 'FULL':
-            from .models import LabBatchAssignment
-            
-            # Get the batch assignment to find all instructors
-            batch_assignment = LabBatchAssignment.objects.filter(
-                year=selected_year,
-                section_number=cls.section_number,
-                course=cls.course,
-                batch=cls.batch
-            ).first()
-            
-            if batch_assignment and batch_assignment.instructors.exists():
-                # Create entry for EACH instructor assigned to this batch
-                for instructor in batch_assignment.instructors.all():
-                    TimetableEntry.objects.get_or_create(
-                        timetable=timetable_obj,
-                        year=selected_year,
-                        section_number=cls.section_number,
-                        course=cls.course,
-                        instructor=instructor,
-                        lab_room=cls.room,
-                        meeting_time=cls.meeting_time,
-                        batch=cls.batch,  # B1 or B2
-                        is_evaluator=False  # Batch split instructors are not evaluators
-                    )
-            else:
-                # Fallback: use the instructor from the class
-                TimetableEntry.objects.get_or_create(
-                    timetable=timetable_obj,
-                    year=selected_year,
-                    section_number=cls.section_number,
-                    course=cls.course,
-                    instructor=cls.instructor,
-                    lab_room=cls.room,
-                    meeting_time=cls.meeting_time,
-                    batch=cls.batch,  # B1 or B2
-                    is_evaluator=False  # Batch split instructors are not evaluators
-                )
-        # For LAB courses with multiple instructors (non-split), create entry for EACH instructor
-        elif cls.course.course_type == 'LAB':
+        # For LAB courses with multiple instructors (non-split), use is_evaluator flag from Class object
+        if cls.course.course_type == 'LAB':
             # Use the is_evaluator flag from the Class object
             # Debug: Log what we're saving
             logger.info(f"DEBUG-SAVE: {cls.course.course_number} Sec{cls.section_number}, {cls.instructor.name if cls.instructor else 'N/A'}, is_evaluator={cls.is_evaluator}")
@@ -2267,7 +2351,6 @@ def timetable(request):
                 meeting_time=cls.meeting_time,
                 defaults={
                     'lab_room': cls.room,
-                    'batch': 'FULL',
                     'is_evaluator': cls.is_evaluator  # Mark evaluators vs main instructor
                 }
             )
@@ -2281,7 +2364,6 @@ def timetable(request):
                 instructor=cls.instructor,
                 lab_room=None,
                 meeting_time=cls.meeting_time,
-                batch='FULL',
                 is_evaluator=False  # Theory/elective instructors are not evaluators
             )
 
@@ -2403,7 +2485,7 @@ def timetable(request):
         'weekDays': DAYS_OF_WEEK,
         'selected_year': selected_year,
         'fitness_score': schedule.getFitness(),
-        'generation_count': VARS['generationNum'],
+        'generation_count': attempt,
         'from_database': False
     })
 
@@ -2439,7 +2521,7 @@ def instructor_timetable(request):
     )
     
     # Deduplicate entries to prevent overlaps in display
-    # Key: (year, section, course, day, time, room) → entry
+    # Key: (year, section, course, day, time, room) â†’ entry
     seen = {}
     unique_entries = []
     
@@ -2636,8 +2718,8 @@ def view_timetable(request):
                 if entries.exists():
                     labs_data.append({
                         'lab': lab,
-                        'schedule': _convert_entries_to_classes(entries),
-                        'total_classes': entries.count()
+                        'schedule': _convert_entries_to_classes(entries, deduplicate_lab_instructors=True),
+                        'total_classes': len(set((e.meeting_time.day, e.meeting_time.time) for e in entries))
                     })
             
             context['all_labs_view'] = True
@@ -2651,8 +2733,8 @@ def view_timetable(request):
             ).select_related('course', 'instructor', 'meeting_time', 'lab_room', 'year')
             
             context['selected_lab'] = LabRoom.objects.get(id=lab_id)
-            context['schedule'] = _convert_entries_to_classes(entries)
-            context['total_classes'] = len(context['schedule'])
+            context['schedule'] = _convert_entries_to_classes(entries, deduplicate_lab_instructors=True)
+            context['total_classes'] = len(set((e.meeting_time.day, e.meeting_time.time) for e in entries))
     
     # PERIOD-WISE (Show who's FREE at a specific time)
     elif view_type == 'period':
@@ -2684,36 +2766,97 @@ def view_timetable(request):
             context['busy_faculty'] = busy_entries
             context['total_free'] = free_faculty.count()
             context['total_busy'] = busy_entries.count()
+            
+    # HALF-DAY WISE (Show who's FREE for an entire half day)
+    elif view_type == 'halfday':
+        day = request.GET.get('day')
+        half = request.GET.get('half')  # 'forenoon' or 'afternoon'
+        
+        if day and half:
+            # Determine relevant time slots based on index
+            all_slots = [slot[0] for slot in TIME_SLOTS]
+            
+            if half == 'forenoon':
+                # First 4 periods (indexes 0, 1, 2, 3)
+                target_slots = all_slots[:4]
+            else:
+                # Afternoon periods (skipping lunch which is usually index 4 depending on year, so we take periods after 12:15)
+                # Just take the last 3 slots, since the system normally has 8 slots total (4 forenoon, 1 lunch, 3 afternoon)
+                target_slots = all_slots[-3:]
+                
+            # Get all faculty teaching at ANY of these times
+            busy_faculty = TimetableEntry.objects.filter(
+                meeting_time__day=day,
+                meeting_time__time__in=target_slots,
+                instructor__isnull=False
+            ).values_list('instructor_id', flat=True).distinct()
+            
+            # Get free faculty
+            all_faculty = Instructor.objects.all()
+            free_faculty = all_faculty.exclude(id__in=busy_faculty)
+            
+            # Get busy faculty details across the half day to show what they are doing
+            busy_entries = TimetableEntry.objects.filter(
+                meeting_time__day=day,
+                meeting_time__time__in=target_slots,
+                instructor__isnull=False
+            ).select_related('course', 'instructor', 'meeting_time', 'year')
+            
+            busy_faculty_dict = {}
+            for entry in busy_entries:
+                if entry.instructor not in busy_faculty_dict:
+                    busy_faculty_dict[entry.instructor] = []
+                busy_faculty_dict[entry.instructor].append(entry)
+                
+            context['selected_day'] = day
+            context['selected_half'] = half
+            context['target_slots'] = target_slots
+            context['free_faculty'] = free_faculty
+            context['busy_faculty_dict'] = busy_faculty_dict
+            context['total_free'] = free_faculty.count()
+            context['total_busy'] = len(busy_faculty_dict)
     
     return render(request, 'view_timetable.html', context)
 
 
-def _convert_entries_to_classes(entries):
-    """Helper function to convert TimetableEntry queryset to Class objects"""
-    seen = {}
-    unique_entries = []
-    
-    for entry in entries:
-        key = (
-            entry.year_id,
-            entry.section_number,
-            entry.course_id,
-            entry.meeting_time.day,
-            entry.meeting_time.time,
-            entry.lab_room_id if entry.lab_room else None
-        )
-        if key not in seen:
-            seen[key] = entry
-            unique_entries.append(entry)
-    
+def _convert_entries_to_classes(entries, deduplicate_lab_instructors=False):
+    """
+    Helper function to convert TimetableEntry queryset to Class objects
+    """
     classes = []
-    for entry in unique_entries:
+    seen = {}
+    for entry in entries:
+        if deduplicate_lab_instructors and entry.course.course_type == 'LAB':
+            key = (entry.year_id, entry.section_number, entry.course_id, entry.meeting_time.day, entry.meeting_time.time, entry.lab_room_id)
+            if key in seen:
+                # Add instructor to the list of instructors
+                if entry.instructor:
+                    seen[key].append(entry.instructor.name)
+                continue
+            else:
+                if entry.instructor:
+                    seen[key] = [entry.instructor.name]
+                else:
+                    seen[key] = []
+        
         cls = Class(entry.year, entry.section_number, entry.course)
         cls.set_instructor(entry.instructor)
         cls.set_meetingTime(entry.meeting_time)
         cls.room = entry.lab_room
         classes.append(cls)
     
+    # If deduplicated, we could optionally update the instructor names on the class objects
+    if deduplicate_lab_instructors:
+        for cls in classes:
+            if cls.course.course_type == 'LAB':
+                key = (cls.year.id, cls.section_number, cls.course.course_number, cls.meeting_time.day, cls.meeting_time.time, cls.room.id if cls.room else None)
+                if key in seen and seen[key]:
+                    # Create a dummy instructor with comma separated names
+                    class DummyInstructor:
+                        def __init__(self, names):
+                            self.name = ", ".join(names)
+                    cls.set_instructor(DummyInstructor(seen[key]))
+                    
     return classes
 
 
@@ -2753,15 +2896,15 @@ def data_check(request):
     issues = []
     
     if data_info['year_courses'].count() == 0:
-        issues.append(f"⚠️ No courses linked to {selected_year.year_name}! Edit year at /yearEdit/ and select courses")
+        issues.append(f"âš ï¸ No courses linked to {selected_year.year_name}! Edit year at /yearEdit/ and select courses")
     
     if data_info['year_meeting_times'].count() == 0:
-        issues.append(f"⚠️ No meeting times for {selected_year.year_name}! Add time slots at /meetingTimeAdd/ and select this year")
+        issues.append(f"âš ï¸ No meeting times for {selected_year.year_name}! Add time slots at /meetingTimeAdd/ and select this year")
     
     # Check for lab courses without lab rooms
     lab_courses = data_info['year_courses'].filter(course_type='LAB')
     if lab_courses.exists() and data_info['total_lab_rooms'] == 0:
-        issues.append("⚠️ Lab courses exist but no lab rooms! Add lab rooms at /labRoomAdd/")
+        issues.append("âš ï¸ Lab courses exist but no lab rooms! Add lab rooms at /labRoomAdd/")
     
     # Check for courses without instructor assignments
     for section_number in data_info['year_sections']:
@@ -2770,9 +2913,9 @@ def data_check(request):
                 year=selected_year, section_number=section_number, course=course
             ).first()
             if not assignment:
-                issues.append(f"⚠️ No instructor assigned for {course.course_number} in section {section_number}")
+                issues.append(f"âš ï¸ No instructor assigned for {course.course_number} in section {section_number}")
             elif assignment.instructors.count() == 0:
-                issues.append(f"⚠️ No instructors selected for {course.course_number} in section {section_number}")
+                issues.append(f"âš ï¸ No instructors selected for {course.course_number} in section {section_number}")
     
     data_info['issues'] = issues
     data_info['ready'] = len(issues) == 0
@@ -2867,13 +3010,11 @@ def meetingTimeAdd(request):
             year = Year.objects.get(id=year_id)
             created_count = 0
             
-            # Determine lunch break based on year
-            # 1st Year has lunch at 11:25-12:15, others at 12:15-1:05
-            is_first_year = '1st' in year.year_name.lower() or '1' in year.year_name
-            lunch_break = '11:25 - 12:15' if is_first_year else '12:15 - 1:05'
-            
-            # Get all time slots except lunch break
-            time_slots = [slot[0] for slot in TIME_SLOTS if slot[0] != lunch_break]
+            # Get time slots excluding the lunch period for this year
+            time_slots = []
+            for i, slot in enumerate(TIME_SLOTS, start=1):
+                if i != year.lunch_period:
+                    time_slots.append(slot[0])
             
             # Find the highest numeric PID to start from
             all_pids = MeetingTime.objects.all().values_list('pid', flat=True)
@@ -3308,6 +3449,244 @@ def specialPeriodDelete(request, pk):
         return redirect('specialPeriodEdit')
 
 
+# ============================================================
+# INSTRUCTOR LOGIN AND PRIORITY MANAGEMENT
+# ============================================================
+
+def instructor_login(request):
+    """Instructor login view using email and password"""
+    if request.user.is_authenticated:
+        # Check if user is an instructor
+        try:
+            instructor = Instructor.objects.get(user=request.user)
+            return redirect('instructor_dashboard')
+        except Instructor.DoesNotExist:
+            logout(request)
+    
+    if request.method == 'POST':
+        form = InstructorLoginForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password']
+            
+            # Find instructor by email
+            try:
+                instructor = Instructor.objects.get(email=email)
+                # Authenticate using the linked user account
+                user = authenticate(request, username=instructor.user.username if instructor.user else email, password=password)
+                
+                if user is not None:
+                    login(request, user)
+                    return redirect('instructor_dashboard')
+                else:
+                    messages.error(request, 'Invalid email or password')
+            except Instructor.DoesNotExist:
+                messages.error(request, 'Invalid email or password')
+    else:
+        form = InstructorLoginForm()
+    
+    return render(request, 'instructor_login.html', {'form': form})
+
+
+def instructor_logout(request):
+    """Logout instructor"""
+    logout(request)
+    return redirect('instructor_login')
+
+
+@login_required
+def instructor_dashboard(request):
+    """Instructor dashboard showing their profile, courses, and timetable"""
+    try:
+        instructor = Instructor.objects.get(user=request.user)
+    except Instructor.DoesNotExist:
+        messages.error(request, 'Instructor profile not found')
+        return redirect('home')
+    
+    # Get instructor's priorities
+    priorities = InstructorPriority.objects.filter(instructor=instructor)
+    days_with_priorities = [p.day for p in priorities]
+    
+    # Check which days are missing priorities
+    all_days = [day[0] for day in DAYS_OF_WEEK]
+    missing_days = [day for day in all_days if day not in days_with_priorities]
+    
+    # Get courses where this instructor is assigned (main or evaluator)
+    assigned_courses = CourseInstructorAssignment.objects.filter(
+        instructors=instructor
+    ).select_related('year', 'course').order_by('year', 'section_number', 'course__course_name')
+    
+    # Get instructor's timetable entries
+    timetable_entries = TimetableEntry.objects.filter(
+        instructor=instructor
+    ).select_related('year', 'course', 'meeting_time', 'lab_room').order_by(
+        'meeting_time__day', 'meeting_time__time'
+    )
+    
+    # Organize timetable by day and time
+    timetable_by_day = defaultdict(list)
+    for entry in timetable_entries:
+        day = entry.meeting_time.day
+        timetable_by_day[day].append(entry)
+    
+    # Get the days in correct order
+    days_order = [day[0] for day in DAYS_OF_WEEK]
+    ordered_timetable = [(day, timetable_by_day.get(day, [])) for day in days_order if timetable_by_day.get(day)]
+    
+    # Count total teaching hours
+    total_hours = timetable_entries.count()
+    
+    context = {
+        'instructor': instructor,
+        'priorities': priorities,
+        'missing_days': missing_days,
+        'priorities_complete': len(missing_days) == 0,
+        'assigned_courses': assigned_courses,
+        'timetable_entries': timetable_entries,
+        'timetable_by_day': ordered_timetable,
+        'total_hours': total_hours,
+    }
+    
+    return render(request, 'instructor_dashboard.html', context)
+
+
+def unified_login(request):
+    """Unified login view with role selection (Admin or Instructor)"""
+    if request.user.is_authenticated:
+        # Redirect based on user type
+        try:
+            instructor = Instructor.objects.get(user=request.user)
+            return redirect('instructor_dashboard')
+        except Instructor.DoesNotExist:
+            # Assume admin user
+            return redirect('home')
+    
+    if request.method == 'POST':
+        form = UnifiedLoginForm(request.POST)
+        if form.is_valid():
+            role = form.cleaned_data['role']
+            username_or_email = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            
+            if role == 'admin':
+                # Admin login using username
+                user = authenticate(request, username=username_or_email, password=password)
+                if user is not None and user.is_staff:
+                    login(request, user)
+                    return redirect('home')
+                else:
+                    messages.error(request, 'Invalid admin credentials or insufficient permissions')
+            
+            elif role == 'instructor':
+                # Instructor login using email
+                try:
+                    instructor = Instructor.objects.get(email=username_or_email)
+                    # Authenticate using the linked user account
+                    user = authenticate(request, username=instructor.user.username if instructor.user else username_or_email, password=password)
+                    
+                    if user is not None:
+                        login(request, user)
+                        return redirect('instructor_dashboard')
+                    else:
+                        messages.error(request, 'Invalid instructor credentials')
+                except Instructor.DoesNotExist:
+                    messages.error(request, 'Instructor not found with this email')
+    else:
+        form = UnifiedLoginForm()
+    
+    return render(request, 'registration/unified_login.html', {'form': form})
+
+
+@login_required
+def instructor_set_priorities(request):
+    """View for instructors to set their period priorities"""
+    try:
+        instructor = Instructor.objects.get(user=request.user)
+    except Instructor.DoesNotExist:
+        messages.error(request, 'Instructor profile not found')
+        return redirect('home')
+    
+    if request.method == 'POST':
+        day = request.POST.get('day')
+        
+        # Get or create priority for this day
+        priority, created = InstructorPriority.objects.get_or_create(
+            instructor=instructor,
+            day=day
+        )
+        
+        # Update priorities for all 7 periods
+        for period in range(1, 8):
+            priority_value = request.POST.get(f'period_{period}_priority')
+            if priority_value:
+                priority.set_period_priority(period, int(priority_value))
+        
+        priority.save()
+        messages.success(request, f'Priorities saved for {day}')
+        return redirect('instructor_dashboard')
+    
+    # GET request - show form
+    day = request.GET.get('day')
+    if not day:
+        # Show day selection
+        all_days = [day[0] for day in DAYS_OF_WEEK]
+        existing_priorities = InstructorPriority.objects.filter(instructor=instructor)
+        days_with_priorities = [p.day for p in existing_priorities]
+        
+        context = {
+            'instructor': instructor,
+            'all_days': all_days,
+            'days_with_priorities': days_with_priorities
+        }
+        return render(request, 'instructor_select_day.html', context)
+    
+    # Show priority form for selected day
+    priority = InstructorPriority.objects.filter(instructor=instructor, day=day).first()
+    
+    # Prepare period data with existing priority values and time slots
+    # Priorities are for 7 teaching periods (lunch excluded).
+    teaching_slots = [slot[1] for idx, slot in enumerate(TIME_SLOTS, start=1) if idx != 5]
+    period_data = []
+    for period in range(1, 8):
+        current_value = priority.get_period_priority(period) if priority else period
+        # Periods are teaching periods only: 1..7 mapped after excluding lunch slot.
+        time_slot = teaching_slots[period - 1] if period <= len(teaching_slots) else ''
+        period_data.append({
+            'number': period,
+            'value': current_value,
+            'time_slot': time_slot
+        })
+    
+    context = {
+        'instructor': instructor,
+        'day': day,
+        'priority': priority,
+        'period_data': period_data
+    }
+    
+    return render(request, 'instructor_set_priorities.html', context)
+
+
+@login_required
+def instructor_view_priorities(request):
+    """View all priorities for the instructor"""
+    try:
+        instructor = Instructor.objects.get(user=request.user)
+    except Instructor.DoesNotExist:
+        messages.error(request, 'Instructor profile not found')
+        return redirect('home')
+    
+    priorities = InstructorPriority.objects.filter(instructor=instructor).order_by('day')
+    
+    context = {
+        'instructor': instructor,
+        'priorities': priorities,
+        'time_slots': TIME_SLOTS
+    }
+    
+    return render(request, 'instructor_view_priorities.html', context)
+
+
 '''
 Error pages
 '''
@@ -3317,3 +3696,5 @@ def error_404(request, exception):
 
 def error_500(request, *args, **argv):
     return render(request,'errors/500.html', {})
+
+

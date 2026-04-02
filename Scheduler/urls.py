@@ -4,17 +4,12 @@ from django.conf.urls.static import static
 from django.conf import settings
 from SchedulerApp.forms import UserLoginForm
 from django.contrib.auth import views
+from SchedulerApp.views import unified_login
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/login/',
-        views.LoginView.as_view(
-            template_name="registration/login.html",
-            authentication_form=UserLoginForm
-        ),
-        name='login'
-    ),
+    path('accounts/login/', unified_login, name='login'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('', include('SchedulerApp.urls')),
 ]

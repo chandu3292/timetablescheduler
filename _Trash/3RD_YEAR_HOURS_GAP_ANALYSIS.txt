@@ -1,0 +1,56 @@
+3RD YEAR COURSE HOURS ANALYSIS
+==============================
+
+PROBLEM SUMMARY:
+================
+All theory courses are CRITICALLY under-scheduled!
+
+Theory Courses Gap Analysis:
+- DAA (23IT4121):           1 hrs scheduled / 4 hrs required = -3 hours per section
+- Cryptography (23IT4122):  1 hrs scheduled / 4 hrs required = -3 hours per section  
+- PE2 (23IT5121):           1 hrs scheduled / 4 hrs required = -3 hours per section
+- PE3 (23IT5131):           1 hrs scheduled / 4 hrs required = -3 hours per section
+- OE (23IT6121):            1 hrs scheduled / 4 hrs required = -3 hours per section ⚠️
+
+This GAP is across ALL 3 SECTIONS - each section is missing 3 hours/week for each theory course!
+
+DETAILED BREAKDOWN:
+===================
+
+✓ OK (Full Hours):
+  - Cryptography Lab (23IT4221): 3 hrs/week
+  - IOT Lab (23IT4222): 3 hrs/week
+  - Elective Lab (23IT5211): 3 hrs/week
+
+⚠️ DEFICIT (Under-scheduled):
+  - DAA (23IT4121): 1 hr scheduled / 4 hr required (-3 hrs gap) - ALL 3 SECTIONS AFFECTED
+  - Cryptography (23IT4122): 1 hr scheduled / 4 hr required (-3 hrs gap) - ALL 3 SECTIONS AFFECTED
+  - PE2 (23IT5121): 1 hr scheduled / 4 hr required (-3 hrs gap) - ALL 3 SECTIONS AFFECTED
+  - PE3 (23IT5131): 1 hr scheduled / 4 hr required (-3 hrs gap) - ALL 3 SECTIONS AFFECTED
+  - OE (23IT6121): 1 hr scheduled / 4 hr required (-3 hrs gap) - ALL 3 SECTIONS AFFECTED ⚠️ CRITICAL
+
+  - PySpark (23IT9304): 1 hr scheduled / 1 hr required (OK) - ALL SECTIONS OK
+  - AGIS (23TP09104): 1 hrs scheduled / 2 hrs required (-1 hr gap) - ALL 3 SECTIONS AFFECTED
+  - SESD (23TP19104): 1 hrs scheduled / 2 hrs required (-1 hr gap) - ALL 3 SECTIONS AFFECTED
+  - HLR (23TP9104): 1 hrs scheduled / 2 hrs required (-1 hr gap) - ALL 3 SECTIONS AFFECTED
+
+SECTION SUMMARY:
+================
+Section 1: 18 hours scheduled / 36 hours required = DEFICIT -18 hours
+Section 2: 18 hours scheduled / 36 hours required = DEFICIT -18 hours
+Section 3: 18 hours scheduled / 36 hours required = DEFICIT -18 hours
+
+ROOT CAUSE:
+===========
+The generated timetable is missing required slots for theory courses.
+Each theory course needs 4 hours per week but only 1 slot is allocated.
+This affects ALL courses in the 3rd year (5 theory courses × 3 sections × 3 missing hours = 45 hours gap)
+
+CRITICAL ISSUE FOR OE (23IT6121):
+=================================
+- Required: 4 hours/week per section
+- Currently Scheduled: Only 1 hour/week per section
+- Missing: 3 hours/week per section
+- Status: This is being treated as incomplete/partially scheduled
+
+All sections need 3 more hours/week allocated for OE.

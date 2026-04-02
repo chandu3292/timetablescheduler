@@ -313,6 +313,7 @@ table.timetable td:first-child {
             <button class="view-type-tab {% if view_type == 'faculty' %}active{% endif %}" onclick="selectViewType('faculty')">Faculty-wise</button>
             <button class="view-type-tab {% if view_type == 'lab' %}active{% endif %}" onclick="selectViewType('lab')">Lab-wise</button>
             <button class="view-type-tab {% if view_type == 'period' %}active{% endif %}" onclick="selectViewType('period')">Period-wise</button>
+            <button class="view-type-tab {% if view_type == 'halfday' %}active{% endif %}" onclick="selectViewType('halfday')">Half-Day-wise</button>
         </div>
         
         <form id="filterForm" method="GET">
@@ -415,8 +416,8 @@ table.timetable td:first-child {
             <div id="period_filters" class="filter-content" style="display: {% if view_type == 'period' %}block{% else %}none{% endif %};">
                 <div class="filter-row">
                     <div class="filter-group">
-                        <label for="day">Select Day:</label>
-                        <select name="day" id="day" required>
+                        <label for="day_period">Select Day:</label>
+                        <select name="day" id="day_period" required>
                             <option value="">-- Select Day --</option>
                             {% for day in weekDays %}
                                 <option value="{{ day }}" {% if selected_day == day %}selected{% endif %}>{{ day }}</option>
@@ -430,6 +431,32 @@ table.timetable td:first-child {
                             {% for slot in timeSlots %}
                                 <option value="{{ slot }}" {% if selected_time == slot %}selected{% endif %}>{{ slot }}</option>
                             {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <button type="submit" class="btn-filter">Find Free Faculty</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Half-Day-wise Filters -->
+            <div id="halfday_filters" class="filter-content" style="display: {% if view_type == 'halfday' %}block{% else %}none{% endif %};">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="day_halfday">Select Day:</label>
+                        <select name="day" id="day_halfday" required>
+                            <option value="">-- Select Day --</option>
+                            {% for day in weekDays %}
+                                <option value="{{ day }}" {% if selected_day == day %}selected{% endif %}>{{ day }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="half">Select Half-Day:</label>
+                        <select name="half" id="half" required>
+                            <option value="">-- Select Forenoon or Afternoon --</option>
+                            <option value="forenoon" {% if selected_half == 'forenoon' %}selected{% endif %}>Forenoon (Morning)</option>
+                            <option value="afternoon" {% if selected_half == 'afternoon' %}selected{% endif %}>Afternoon</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -493,6 +520,52 @@ table.timetable td:first-child {
                     {% endif %}
                 {% endif %}
                 
+            {% elif view_type == 'halfday' %}
+                <!-- Half-Day-wise Results: Free Faculty -->
+                {% if selected_day and selected_half %}
+                    <div class="results-header">
+                        <h3>Faculty Availability - {{ selected_day }} {{ selected_half|title }}</h3>
+                        <div>
+                            <span class="results-count" style="background: #28a745;">Free: {{ total_free }}</span>
+                            <span class="results-count" style="background: #dc3545; margin-left: 10px;">Busy: {{ total_busy }}</span>
+                        </div>
+                    </div>
+                    
+                    <h4 style="color: #28a745; margin-top: 20px;">✓ Completely Free Faculty (No classes in {{ selected_half }})</h4>
+                    {% if free_faculty %}
+                        <div class="faculty-list">
+                            {% for faculty in free_faculty %}
+                                <div class="faculty-card">
+                                    <h4>{{ faculty.name }}</h4>
+                                    <p><strong>ID:</strong> {{ faculty.uid }}</p>
+                                    <p><strong>Status:</strong> Available all {{ selected_half }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-results">No faculty are completely free during the {{ selected_half }}.</p>
+                    {% endif %}
+                    
+                    <h4 style="color: #dc3545; margin-top: 30px;">✗ Busy Faculty (Has classes in {{ selected_half }})</h4>
+                    {% if busy_faculty_dict %}
+                        <div class="faculty-list">
+                            {% for instructor, entries in busy_faculty_dict.items %}
+                                <div class="faculty-card busy">
+                                    <h4>{{ instructor.name }}</h4>
+                                    <p>Busy for {{ entries|length }} period(s):</p>
+                                    <ul style="margin: 5px 0 0 15px; padding: 0; font-size: 13px; color: #666;">
+                                        {% for entry in entries %}
+                                            <li>{{ entry.meeting_time.time }} - {{ entry.course.course_name }} (S{{ entry.section_number }})</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="no-results">All faculty are completely free during the {{ selected_half }}!</p>
+                    {% endif %}
+                {% endif %}
+                
             {% else %}
                 <!-- Regular Timetable Display -->
                 
@@ -519,21 +592,39 @@ table.timetable td:first-child {
                                         <tr>
                                             <td><strong>{{ day }}</strong></td>
                                             {% for slot in timeSlots %}
-                                                <td>
-                                                    {% for class in section_data.schedule %}
-                                                        {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
-                                                            <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
-                                                                <div class="class-course">{{ class.course.course_name }}</div>
-                                                                {% if class.instructor %}
-                                                                    <div class="class-instructor">{{ class.instructor.name }}</div>
+                                                <!-- Check if this is a continuation of a lab block -->
+                                                {% is_lab_continuation section_data.schedule section_data.section_number day slot as is_continuation %}
+                                                
+                                                {% if not is_continuation %}
+                                                    <!-- Check if this is the start of a lab block -->
+                                                    {% is_lab_block_start section_data.schedule section_data.section_number day slot as is_lab_start %}
+                                                    
+                                                    {% if is_lab_start %}
+                                                        <!-- Lab block start - merge consecutive periods HORIZONTALLY -->
+                                                        {% get_lab_rowspan section_data.schedule section_data.section_number day slot as lab_colspan %}
+                                                        {% get_lab_content section_data.schedule section_data.section_number day slot as lab_content %}
+                                                        <td colspan="{{ lab_colspan }}" style="vertical-align: middle; background: #e3f2fd; font-weight: bold; text-align: center;">
+                                                            {{ lab_content|safe }}
+                                                        </td>
+                                                    {% else %}
+                                                        <!-- Regular cell -->
+                                                        <td>
+                                                            {% for class in section_data.schedule %}
+                                                                {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
+                                                                    <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
+                                                                        <div class="class-course">{{ class.course.course_name }}</div>
+                                                                        {% if class.instructor %}
+                                                                            <div class="class-instructor">{{ class.instructor.name }}</div>
+                                                                        {% endif %}
+                                                                        {% if class.room %}
+                                                                            <div class="class-room">{{ class.room.lab_name }}</div>
+                                                                        {% endif %}
+                                                                    </div>
                                                                 {% endif %}
-                                                                {% if class.room %}
-                                                                    <div class="class-room">{{ class.room.lab_name }}</div>
-                                                                {% endif %}
-                                                            </div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </td>
+                                                            {% endfor %}
+                                                        </td>
+                                                    {% endif %}
+                                                {% endif %}
                                             {% endfor %}
                                         </tr>
                                     {% endfor %}
@@ -565,19 +656,33 @@ table.timetable td:first-child {
                                         <tr>
                                             <td><strong>{{ day }}</strong></td>
                                             {% for slot in timeSlots %}
-                                                <td>
-                                                    {% for class in faculty_data.schedule %}
-                                                        {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
-                                                            <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
-                                                                <div class="class-course">{{ class.course.course_name }}</div>
-                                                                <div class="class-room">{{ class.year.year_name }} S{{ class.section_number }}</div>
-                                                                {% if class.room %}
-                                                                    <div class="class-room">{{ class.room.lab_name }}</div>
+                                                {% is_general_lab_continuation faculty_data.schedule day slot as is_continuation %}
+                                                
+                                                {% if not is_continuation %}
+                                                    {% is_general_lab_block_start faculty_data.schedule day slot view_type as is_lab_start %}
+                                                    
+                                                    {% if is_lab_start %}
+                                                        {% get_general_lab_rowspan faculty_data.schedule day slot view_type as lab_colspan %}
+                                                        {% get_general_lab_content faculty_data.schedule day slot view_type as lab_content %}
+                                                        <td colspan="{{ lab_colspan }}" style="vertical-align: middle; text-align: center; padding: 4px;">
+                                                            {{ lab_content|safe }}
+                                                        </td>
+                                                    {% else %}
+                                                        <td>
+                                                            {% for class in faculty_data.schedule %}
+                                                                {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
+                                                                    <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
+                                                                        <div class="class-course">{{ class.course.course_name }}</div>
+                                                                        <div class="class-room">{{ class.year.year_name }} S{{ class.section_number }}</div>
+                                                                        {% if class.room %}
+                                                                            <div class="class-room">{{ class.room.lab_name }}</div>
+                                                                        {% endif %}
+                                                                    </div>
                                                                 {% endif %}
-                                                            </div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </td>
+                                                            {% endfor %}
+                                                        </td>
+                                                    {% endif %}
+                                                {% endif %}
                                             {% endfor %}
                                         </tr>
                                     {% endfor %}
@@ -609,19 +714,33 @@ table.timetable td:first-child {
                                         <tr>
                                             <td><strong>{{ day }}</strong></td>
                                             {% for slot in timeSlots %}
-                                                <td>
-                                                    {% for class in lab_data.schedule %}
-                                                        {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
-                                                            <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
-                                                                <div class="class-course">{{ class.course.course_name }}</div>
-                                                                {% if class.instructor %}
-                                                                    <div class="class-instructor">{{ class.instructor.name }}</div>
+                                                {% is_general_lab_continuation lab_data.schedule day slot as is_continuation %}
+                                                
+                                                {% if not is_continuation %}
+                                                    {% is_general_lab_block_start lab_data.schedule day slot view_type as is_lab_start %}
+                                                    
+                                                    {% if is_lab_start %}
+                                                        {% get_general_lab_rowspan lab_data.schedule day slot view_type as lab_colspan %}
+                                                        {% get_general_lab_content lab_data.schedule day slot view_type as lab_content %}
+                                                        <td colspan="{{ lab_colspan }}" style="vertical-align: middle; text-align: center; padding: 4px;">
+                                                            {{ lab_content|safe }}
+                                                        </td>
+                                                    {% else %}
+                                                        <td>
+                                                            {% for class in lab_data.schedule %}
+                                                                {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
+                                                                    <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
+                                                                        <div class="class-course">{{ class.course.course_name }}</div>
+                                                                        {% if class.instructor %}
+                                                                            <div class="class-instructor">{{ class.instructor.name }}</div>
+                                                                        {% endif %}
+                                                                        <div class="class-room">{{ class.year.year_name }} S{{ class.section_number }}</div>
+                                                                    </div>
                                                                 {% endif %}
-                                                                <div class="class-room">{{ class.year.year_name }} S{{ class.section_number }}</div>
-                                                            </div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </td>
+                                                            {% endfor %}
+                                                        </td>
+                                                    {% endif %}
+                                                {% endif %}
                                             {% endfor %}
                                         </tr>
                                     {% endfor %}
@@ -660,24 +779,72 @@ table.timetable td:first-child {
                                     <tr>
                                         <td><strong>{{ day }}</strong></td>
                                         {% for slot in timeSlots %}
-                                            <td>
-                                                {% for class in schedule %}
-                                                    {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
-                                                        <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
-                                                            <div class="class-course">{{ class.course.course_name }}</div>
-                                                            {% if class.instructor %}
-                                                                <div class="class-instructor">{{ class.instructor.name }}</div>
-                                                            {% endif %}
-                                                            {% if class.room %}
-                                                                <div class="class-room">{{ class.room.lab_name }}</div>
-                                                            {% endif %}
-                                                            {% if view_type == 'year' or view_type == 'faculty' or view_type == 'lab' %}
-                                                                <div class="class-room">{{ class.year.year_name }} S{{ class.section_number }}</div>
-                                                            {% endif %}
-                                                        </div>
+                                            {% if view_type == 'section' %}
+                                                <!-- For section view, apply lab merging -->
+                                                {% is_lab_continuation schedule selected_section day slot as is_continuation %}
+                                                
+                                                {% if not is_continuation %}
+                                                    {% is_lab_block_start schedule selected_section day slot as is_lab_start %}
+                                                    
+                                                    {% if is_lab_start %}
+                                                        {% get_lab_rowspan schedule selected_section day slot as lab_colspan %}
+                                                        {% get_lab_content schedule selected_section day slot as lab_content %}
+                                                        <td colspan="{{ lab_colspan }}" style="vertical-align: middle; background: #e3f2fd; font-weight: bold; text-align: center;">
+                                                            {{ lab_content|safe }}
+                                                        </td>
+                                                    {% else %}
+                                                        <td>
+                                                            {% for class in schedule %}
+                                                                {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
+                                                                    <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
+                                                                        <div class="class-course">{{ class.course.course_name }}</div>
+                                                                        {% if class.instructor %}
+                                                                            <div class="class-instructor">{{ class.instructor.name }}</div>
+                                                                        {% endif %}
+                                                                        {% if class.room %}
+                                                                            <div class="class-room">{{ class.room.lab_name }}</div>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </td>
                                                     {% endif %}
-                                                {% endfor %}
-                                            </td>
+                                                {% endif %}
+                                            {% else %}
+                                                <!-- For faculty/lab views, regular display -->
+                                                {% is_general_lab_continuation schedule day slot as is_continuation %}
+                                                
+                                                {% if not is_continuation %}
+                                                    {% is_general_lab_block_start schedule day slot view_type as is_lab_start %}
+                                                    
+                                                    {% if is_lab_start %}
+                                                        {% get_general_lab_rowspan schedule day slot view_type as lab_colspan %}
+                                                        {% get_general_lab_content schedule day slot view_type as lab_content %}
+                                                        <td colspan="{{ lab_colspan }}" style="vertical-align: middle; text-align: center; padding: 4px;">
+                                                            {{ lab_content|safe }}
+                                                        </td>
+                                                    {% else %}
+                                                        <td>
+                                                            {% for class in schedule %}
+                                                                {% if class.meeting_time.day == day and class.meeting_time.time == slot %}
+                                                                    <div class="class-card {% if class.course.course_type == 'LAB' %}lab{% elif class.course.course_type == 'ELECTIVE' %}elective{% endif %}">
+                                                                        <div class="class-course">{{ class.course.course_name }}</div>
+                                                                        {% if class.instructor %}
+                                                                            <div class="class-instructor">{{ class.instructor.name }}</div>
+                                                                        {% endif %}
+                                                                        {% if class.room and view_type != 'lab' %}
+                                                                            <div class="class-room">{{ class.room.lab_name }}</div>
+                                                                        {% endif %}
+                                                                        {% if view_type == 'year' or view_type == 'faculty' or view_type == 'lab' %}
+                                                                            <div class="class-room">{{ class.year.year_name }} S{{ class.section_number }}</div>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </td>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endif %}
                                         {% endfor %}
                                     </tr>
                                 {% endfor %}

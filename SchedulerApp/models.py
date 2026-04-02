@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, User
 from django.db.models.signals import post_save, post_delete
 
 
@@ -45,14 +45,18 @@ COURSE_TYPE = (
 SPECIAL_PERIOD_TYPE = (
     ('Counseling', 'Counseling'),
     ('Training', 'Training'),
-    ('Sports/Library', 'Sports/Library'),
+    ('Sports', 'Sports'),
+    ('Library', 'Library'),
 )
 
-BATCH_CHOICES = (
-    ('B1', 'Batch 1'),
-    ('B2', 'Batch 2'),
-    ('FULL', 'Full Section'),  # For non-split courses
+
+DESIGNATION_CHOICES = (
+    ('PROF', 'Professor'),
+    ('ASSOC_PROF', 'Associate Professor'),
+    ('ASST_PROF', 'Assistant Professor'),
 )
+
+DAYS_OF_WEEK_LIST = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 
 class LabRoom(models.Model):
@@ -67,10 +71,76 @@ class LabRoom(models.Model):
 class Instructor(models.Model):
     uid = models.CharField(max_length=6)
     name = models.CharField(max_length=25)
+    email = models.EmailField(unique=True, blank=True, null=True, help_text="Email ID for login")
     department = models.CharField(max_length=10, null=True, blank=True, help_text="Department code: IT, EC, ME, etc.")
+    designation = models.CharField(max_length=20, choices=DESIGNATION_CHOICES, default='ASST_PROF', help_text="Professor, Associate Professor, or Assistant Professor")
+    
+    # Link to Django User for authentication
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True, related_name='instructor_profile')
 
     def __str__(self):
         return f'{self.uid} {self.name}'
+    
+    def is_assistant_professor(self):
+        """Check if instructor is an Assistant Professor (eligible to be evaluator)"""
+        return self.designation == 'ASST_PROF'
+
+
+class InstructorPriority(models.Model):
+    """
+    Stores instructor preferences for each period of each day.
+    Priority ranges from 1 (highest) to 7 (lowest).
+    Instructors must set priorities for all 7 periods for each working day.
+    """
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='priorities')
+    day = models.CharField(max_length=15, choices=DAYS_OF_WEEK)
+    
+    # Period priorities (1 = highest preference, 7 = lowest preference)
+    period_1_priority = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(7)], default=1)
+    period_2_priority = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(7)], default=2)
+    period_3_priority = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(7)], default=3)
+    period_4_priority = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(7)], default=4)
+    period_5_priority = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(7)], default=5)
+    period_6_priority = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(7)], default=6)
+    period_7_priority = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(7)], default=7)
+    
+    class Meta:
+        unique_together = ['instructor', 'day']
+        ordering = ['instructor', 'day']
+    
+    def __str__(self):
+        return f"{self.instructor.name} - {self.day} priorities"
+    
+    def get_period_priority(self, period_number):
+        """Get priority for a specific period (1-7)"""
+        priority_map = {
+            1: self.period_1_priority,
+            2: self.period_2_priority,
+            3: self.period_3_priority,
+            4: self.period_4_priority,
+            5: self.period_5_priority,
+            6: self.period_6_priority,
+            7: self.period_7_priority,
+        }
+        return priority_map.get(period_number, 7)  # Default to lowest priority if invalid
+    
+    def set_period_priority(self, period_number, priority_value):
+        """Set priority for a specific period"""
+        if period_number == 1:
+            self.period_1_priority = priority_value
+        elif period_number == 2:
+            self.period_2_priority = priority_value
+        elif period_number == 3:
+            self.period_3_priority = priority_value
+        elif period_number == 4:
+            self.period_4_priority = priority_value
+        elif period_number == 5:
+            self.period_5_priority = priority_value
+        elif period_number == 6:
+            self.period_6_priority = priority_value
+        elif period_number == 7:
+            self.period_7_priority = priority_value
+
     
 class Course(models.Model):
     course_number = models.CharField(max_length=10, primary_key=True)
@@ -88,17 +158,29 @@ class Course(models.Model):
     # Department code for the course (determines which evaluators can be assigned)
     dept_code = models.CharField(max_length=10, null=True, blank=True, help_text="Department code: IT, EC, ME, etc.")
     
-    # New field for batch splitting (for labs that split sections into B1 and B2)
-    split_into_batches = models.BooleanField(default=False, help_text="Split section into batches B1 and B2 (for labs with rotation)")
+
 
     def __str__(self):
         return f'{self.course_number} {self.course_name}'
 class Year(models.Model):
     year_name = models.CharField(max_length=20)  # e.g. "2nd Year"
     courses = models.ManyToManyField(Course)
+    lunch_period = models.IntegerField(
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(8)],
+        help_text="Which time slot is lunch break (1-8). 1st year=4 (11:25-12:15), Others=5 (12:15-1:05)"
+    )
 
     def __str__(self):
         return self.year_name
+    
+    def get_available_periods(self):
+        """Returns list of (index, time_slot) tuples excluding lunch break"""
+        available = []
+        for i, slot in enumerate(TIME_SLOTS, start=1):
+            if i != self.lunch_period:
+                available.append((i, slot[1]))
+        return available
 
 
 class MeetingTime(models.Model):
@@ -146,40 +228,7 @@ class CourseInstructorAssignment(models.Model):
         return f"{self.year} Section {self.section_number} - {self.course} → {instructor_names}"
 
 
-class LabBatchAssignment(models.Model):
-    """
-    Defines lab sessions for batch-split courses with rotation.
-    The scheduler automatically finds available time slots.
-    
-    Example: For a course with 2 sessions per week (rotation):
-    Session 1: B1 -> IoT Lab (Inst A, Inst B), B2 -> Cryptography Lab (Inst C, Inst D)
-    Session 2: B1 -> Cryptography Lab (Inst E), B2 -> IoT Lab (Inst F)
-    
-    The scheduler will automatically find 2 available time slots and schedule them.
-    """
-    year = models.ForeignKey(Year, on_delete=models.CASCADE)
-    section_number = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(3)])
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, limit_choices_to={'split_into_batches': True})
-    batch = models.CharField(max_length=4, choices=BATCH_CHOICES)  # B1 or B2
-    
-    # Session number (1, 2, 3...) for rotation - each session can have different instructor/lab
-    session_number = models.IntegerField(default=1, validators=[MinValueValidator(1)], 
-                                         help_text="Session number for rotation (1=first session, 2=second session, etc.)")
-    
-    main_instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='main_batches', null=True, blank=True, help_text="Primary instructor whose availability determines scheduling")
-    instructors = models.ManyToManyField(Instructor)  # Multiple instructors per batch (includes main + evaluators)
-    lab_room = models.ForeignKey(LabRoom, on_delete=models.CASCADE)
-    
-    # The paired course that runs simultaneously (e.g., IoT pairs with Cryptography)
-    paired_course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='paired_with', null=True, blank=True)
-    
-    class Meta:
-        unique_together = ['year', 'section_number', 'course', 'batch', 'session_number']
-        ordering = ['year', 'section_number', 'course', 'session_number', 'batch']
-    
-    def __str__(self):
-        instructor_names = ", ".join([inst.name for inst in self.instructors.all()]) if self.instructors.exists() else "No instructors"
-        return f"{self.year} Sec{self.section_number} - {self.course.course_number} [{self.batch}] Session{self.session_number} - {instructor_names} - {self.lab_room}"
+
 
 
 class GeneratedTimetable(models.Model):
@@ -219,8 +268,6 @@ class TimetableEntry(models.Model):
     lab_room = models.ForeignKey(LabRoom, on_delete=models.CASCADE, null=True, blank=True)
     meeting_time = models.ForeignKey(MeetingTime, on_delete=models.CASCADE)
     
-    # Batch information for split labs (B1, B2, or FULL for non-split courses)
-    batch = models.CharField(max_length=4, choices=BATCH_CHOICES, default='FULL')
     
     # Instructor role (for labs with multiple instructors)
     is_evaluator = models.BooleanField(default=False, help_text="True if this instructor is an evaluator, False if main instructor")
@@ -229,10 +276,9 @@ class TimetableEntry(models.Model):
         ordering = ['year', 'section_number', 'meeting_time__day', 'meeting_time__time']
         
     def __str__(self):
-        batch_info = f" [{self.batch}]" if self.batch != 'FULL' else ""
         role = " (Evaluator)" if self.is_evaluator else ""
         room_info = self.lab_room if self.lab_room else None
-        return f"{self.year} Section {self.section_number}{batch_info} - {self.course.course_name} @ {self.meeting_time.day} {self.meeting_time.time}{role}"
+        return f"{self.year} Section {self.section_number} - {self.course.course_name} @ {self.meeting_time.day} {self.meeting_time.time}{role}"
     
     def get_room(self):
         """Returns the appropriate room (lab or regular)"""

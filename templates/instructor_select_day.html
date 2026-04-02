@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Day - Period Priorities</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #f5f7fa;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .day-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .day-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .day-card.complete {
+            border-left: 5px solid #28a745;
+        }
+        .day-card.incomplete {
+            border-left: 5px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <span class="navbar-brand mb-0 h1">Set Period Priorities</span>
+        <a href="{% url 'instructor_dashboard' %}" class="btn btn-light btn-sm">Back to Dashboard</a>
+    </nav>
+    
+    <div class="container mt-4">
+        <h3>Select a Day to Set Priorities</h3>
+        <p class="text-muted">Choose a day to set your period preferences (1-7 priorities).</p>
+        
+        <div class="row">
+            {% for day in all_days %}
+                <div class="col-md-6 col-lg-4">
+                    <a href="?day={{ day }}" class="text-decoration-none">
+                        <div class="card day-card {% if day in days_with_priorities %}complete{% else %}incomplete{% endif %}">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ day }}</h5>
+                                {% if day in days_with_priorities %}
+                                    <span class="badge badge-success">✓ Priorities Set</span>
+                                {% else %}
+                                    <span class="badge badge-warning">⚠ Not Set</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

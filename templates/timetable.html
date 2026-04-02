@@ -57,7 +57,7 @@
       </tr>
     </thead>
 
-    <!-- ✅ MODIFIED TBODY -->
+    <!-- ✅ MODIFIED TBODY WITH LAB BLOCK MERGING -->
     <tbody>
       {% for week in weekDays %}
       <tr>
@@ -78,10 +78,29 @@
 
           {% else %}
 
-              <td>
-                {% sub schedule section_number week.0 time.0 as cell_content %}
-                {{ cell_content|safe }}
-              </td>
+              <!-- Check if this is a continuation of a lab block (should be hidden) -->
+              {% is_lab_continuation schedule section_number week.0 time.0 as is_continuation %}
+              
+              {% if not is_continuation %}
+                <!-- Check if this is the start of a lab block -->
+                {% is_lab_block_start schedule section_number week.0 time.0 as is_lab_start %}
+                
+                {% if is_lab_start %}
+                  <!-- Lab block start - merge consecutive periods HORIZONTALLY -->
+                  {% get_lab_rowspan schedule section_number week.0 time.0 as lab_colspan %}
+                  {% get_lab_content schedule section_number week.0 time.0 as lab_content %}
+                  <td colspan="{{ lab_colspan }}" style="vertical-align: middle; background: #e3f2fd; font-weight: bold; text-align: center;">
+                    {{ lab_content|safe }}
+                  </td>
+                {% else %}
+                  <!-- Regular cell -->
+                  <td>
+                    {% sub schedule section_number week.0 time.0 as cell_content %}
+                    {{ cell_content|safe }}
+                  </td>
+                {% endif %}
+              {% endif %}
+              <!-- If is_continuation, don't render any cell (it's merged) -->
 
           {% endif %}
 

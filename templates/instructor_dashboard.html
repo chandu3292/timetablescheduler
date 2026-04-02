@@ -1,0 +1,285 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Dashboard - {{ instructor.name }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background: #f5f7fa;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .dashboard-card {
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            font-size: 0.9rem;
+            padding: 5px 15px;
+        }
+        .course-item {
+            padding: 10px;
+            border-left: 4px solid #667eea;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .timetable-entry {
+            padding: 12px;
+            border-left: 4px solid #28a745;
+            background: #fff;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .timetable-entry.evaluator {
+            border-left-color: #ffc107;
+        }
+        .day-section {
+            margin-bottom: 20px;
+        }
+        .day-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .stats-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stats-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .batch-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+        }
+        .role-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <span class="navbar-brand mb-0 h1"><i class="fas fa-chalkboard-teacher"></i> Instructor Dashboard</span>
+        <div>
+            <span class="text-white mr-3">{{ instructor.name }}</span>
+            <a href="{% url 'instructor_logout' %}" class="btn btn-light btn-sm"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <!-- Stats Row -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="card dashboard-card stats-card">
+                    <div class="stats-number">{{ assigned_courses.count }}</div>
+                    <div class="stats-label">Courses Assigned</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card stats-card">
+                    <div class="stats-number">{{ total_hours }}</div>
+                    <div class="stats-label">Teaching Hours/Week</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card stats-card">
+                    <div class="stats-number">{{ timetable_by_day|length }}</div>
+                    <div class="stats-label">Active Days</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card stats-card">
+                    {% if priorities_complete %}
+                        <div class="stats-number text-success"><i class="fas fa-check-circle"></i></div>
+                        <div class="stats-label">Priorities Complete</div>
+                    {% else %}
+                        <div class="stats-number text-warning"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stats-label">{{ missing_days|length }} Days Pending</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Profile Card -->
+            <div class="col-md-4">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-user"></i> Profile Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <th>ID:</th>
+                                <td>{{ instructor.uid }}</td>
+                            </tr>
+                            <tr>
+                                <th>Name:</th>
+                                <td>{{ instructor.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td><small>{{ instructor.email }}</small></td>
+                            </tr>
+                            <tr>
+                                <th>Designation:</th>
+                                <td>{{ instructor.get_designation_display }}</td>
+                            </tr>
+                            <tr>
+                                <th>Department:</th>
+                                <td>{{ instructor.department|default:"Not specified" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Priority Management Card -->
+                <div class="card dashboard-card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-star"></i> Priority Management</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="small">Set your period preferences (1=highest, 7=lowest).</p>
+                        
+                        <a href="{% url 'instructor_set_priorities' %}" class="btn btn-primary btn-block btn-sm mb-2">
+                            <i class="fas fa-edit"></i> Set/Edit Priorities
+                        </a>
+                        <a href="{% url 'instructor_view_priorities' %}" class="btn btn-secondary btn-block btn-sm">
+                            <i class="fas fa-list"></i> View All Priorities
+                        </a>
+                        
+                        {% if missing_days %}
+                            <div class="alert alert-warning mt-3 mb-0 small">
+                                <strong>Pending:</strong> {{ missing_days|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Assigned Courses Card -->
+            <div class="col-md-8">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-book"></i> Assigned Courses ({{ assigned_courses.count }})</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        {% if assigned_courses %}
+                            {% for assignment in assigned_courses %}
+                                <div class="course-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ assignment.course.course_name }}</strong>
+                                            <span class="badge badge-info ml-2">{{ assignment.course.course_number }}</span>
+                                            {% if assignment.main_instructor.id == instructor.id %}
+                                                <span class="badge badge-primary role-badge">Main</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary role-badge">Evaluator</span>
+                                            {% endif %}
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ assignment.year.year_name }} - Section {{ assignment.section_number }} 
+                                                | {{ assignment.course.get_course_type_display }}
+                                                | {{ assignment.course.hours_per_week }} hrs/week
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <p>No courses assigned yet.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Weekly Timetable -->
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> My Weekly Timetable ({{ total_hours }} hours)</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if timetable_by_day %}
+                            {% for day, entries in timetable_by_day %}
+                                <div class="day-section">
+                                    <div class="day-header">
+                                        <strong><i class="fas fa-calendar-day"></i> {{ day }}</strong>
+                                        <span class="badge badge-light float-right">{{ entries|length }} class{% if entries|length != 1 %}es{% endif %}</span>
+                                    </div>
+                                    {% for entry in entries %}
+                                        <div class="timetable-entry {% if entry.is_evaluator %}evaluator{% endif %}">
+                                            <div class="row">
+                                                <div class="col-md-2">
+                                                    <strong><i class="far fa-clock"></i> {{ entry.meeting_time.time }}</strong>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <strong>{{ entry.course.course_name }}</strong>
+                                                    {% if entry.is_evaluator %}
+                                                        <span class="badge badge-warning role-badge">Evaluator</span>
+                                                    {% endif %}
+                                                    {% if entry.batch != 'FULL' %}
+                                                        <span class="badge badge-info batch-badge">{{ entry.batch }}</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-graduation-cap"></i> {{ entry.year.year_name }} - Sec {{ entry.section_number }}
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <small class="text-muted">
+                                                        {% if entry.lab_room %}
+                                                            <i class="fas fa-door-open"></i> {{ entry.lab_room.lab_name }}
+                                                        {% else %}
+                                                            <i class="fas fa-chalkboard"></i> Classroom
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-calendar-times fa-4x mb-3"></i>
+                                <p>No timetable generated yet. Timetables will appear here once generated by the admin.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="text-center text-muted py-4 mt-4">
+        <small>&copy; 2026 Timetable Scheduler System</small>
+    </footer>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

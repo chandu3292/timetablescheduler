@@ -1,0 +1,116 @@
+3RD YEAR COURSE HOURS ANALYSIS - EXECUTIVE SUMMARY
+================================================
+
+KEY FINDINGS:
+=============
+
+✅ PROPERLY SCHEDULED (4 hours/week):
+   - DAA (23IT4121)
+   - Cryptography (23IT4122)
+   - PE2 (23IT5121)
+   - PE3 (23IT5131)
+   - PySpark (23IT9304)
+   - AGIS (23TP09104)
+   - SESD (23TP19104)
+   - HLR (23TP9104)
+
+⚠️ OVER-SCHEDULED (6 extra hours for labs):
+   - Cryptography Lab (23IT4221): 9 hrs/week (3 hrs required) = +6 hrs excess
+   - IOT Lab (23IT4222): 9 hrs/week (3 hrs required) = +6 hrs excess
+   - Elective Lab (23IT5211): 9 hrs/week (3 hrs required) = +6 hrs excess
+
+❌ CRITICALLY UNDER-SCHEDULED:
+   - OE (23IT6121): Only 1 hour/week scheduled (4 hours required) = MISSING 3 HOURS/WEEK
+
+==============================================================================
+
+DETAILED TABLE: EACH COURSE BY SECTION
+==============================================================================
+
+Course                     Section 1      Section 2      Section 3
+                          Hrs Req  Req   Hrs Req  Req   Hrs Req  Req
+DAA (23IT4121)             4/4 ✓   4/4 ✓   4/4 ✓
+Cryptography (23IT4122)    4/4 ✓   4/4 ✓   4/4 ✓
+Cryptography Lab (23IT4221)9/3 ⚠   9/3 ⚠   9/3 ⚠
+IOT Lab (23IT4222)         9/3 ⚠   9/3 ⚠   9/3 ⚠
+PE2 (23IT5121)             4/4 ✓   4/4 ✓   4/4 ✓
+PE3 (23IT5131)             4/4 ✓   4/4 ✓   4/4 ✓
+Elective Lab (23IT5211)    9/3 ⚠   9/3 ⚠   9/3 ⚠
+OE (23IT6121)              1/4 ✗   1/4 ✗   1/4 ✗  <-- CRITICAL ISSUE
+PySpark (23IT9304)         1/1 ✓   1/1 ✓   1/1 ✓
+AGIS (23TP09104)           2/2 ✓   2/2 ✓   2/2 ✓
+SESD (23TP19104)           2/2 ✓   2/2 ✓   2/2 ✓
+HLR (23TP9104)             2/2 ✓   2/2 ✓   2/2 ✓
+
+==============================================================================
+
+OE (23IT6121) CRITICAL ISSUE - DETAILED ANALYSIS:
+==============================================================================
+
+Course Code:       23IT6121
+Course Name:       OE (Open Elective)
+Course Type:       THEORY
+Required Hours:    4 hours per week
+Current Schedule:  1 hour per week
+
+CURRENT TIMETABLE:
+  - Section 1: Friday 8:45-9:45 (Mrs B sunayana)
+  - Section 2: Friday 8:45-9:45 (Ms B keerthana)
+  - Section 3: Friday 8:45-9:45 (Ms B keerthana)
+
+WHAT'S MISSING:
+  Each section needs 3 MORE hours per week
+  Total deficit across all sections: 9 hours (3 sections × 3 hours)
+
+DATABASE COUNT:
+  Total TimetableEntry records for OE: 3 (one per section)
+  Each section has only 1 entry (1 hour)
+
+IMPACT:
+  - OE is severely under-scheduled
+  - Students get only 25% of required instruction time
+  - This violates curriculum requirements
+  - Schedule must be fixed BEFORE timetable can be finalized
+
+==============================================================================
+
+OTHER OBSERVATIONS:
+==============================================================================
+
+Lab Courses Over-Scheduled:
+  The labs (23IT4221, 23IT4222, 23IT5211) each have 9 entries per section
+  when they only require 3 hours per week. This suggests:
+  - Lab sessions may have multiple batch entries (B1, B2)
+  - Or there's duplication in the schedule
+  
+Recommendation: Review lab batch division and consolidation
+
+Course Type Distribution by Required Hours:
+  - Theory (Lecture): 4 hours/week
+  - Electives: 4 hours/week  
+  - Labs: 3 hours/week or split across batches
+  - Mini courses: 1-2 hours/week
+
+==============================================================================
+
+NEXT STEPS:
+==============================================================================
+
+1. ADD 3 MORE HOURS TO OE SCHEDULE (per section)
+   Suggestions for additional slots:
+   - Tuesday, Wednesday, or Thursday (already have slots available)
+   - Consider instructor availability for all three sections
+
+2. VERIFY LAB SCHEDULING
+   Confirm if 9 hours per lab is intentional (batch rotation)
+   or if consolidation is needed
+
+3. RUN VALIDATION AFTER FIXES
+   Once OE is rescheduled, run:
+   python final_3rd_year_analysis.py
+   to verify all courses meet requirements
+
+==============================================================================
+
+Generated: March 18, 2026
+Database: 3rd Year (23IT6121) scheduling analysis

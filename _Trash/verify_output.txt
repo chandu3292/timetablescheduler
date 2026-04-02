@@ -1,0 +1,323 @@
+Generating for 3rd Year...
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f537' in position 0: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1297, in build_schedule
+    logger.info(f"\U0001f537 Scheduling Order: {len(lab_courses)} LABs \u2192 {len(elective_courses)} ELECTIVEs \u2192 {len(continuous_theory_courses)} TP courses \u2192 {len(regular_theory_courses)} regular THEORY")
+Message: '\U0001f537 Scheduling Order: 3 LABs \u2192 2 ELECTIVEs \u2192 6 TP courses \u2192 1 regular THEORY'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 4: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1310, in build_schedule
+    if not self._schedule_elective_course(schedule, data, course, selected_year, sections):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1683, in _schedule_elective_course
+    logger.warning(f"    \u274c Not enough pre-allocated times! Need {hours_per_week}, got {len(times_to_use)}")
+Message: '    \u274c Not enough pre-allocated times! Need 4, got 0'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 2: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1310, in build_schedule
+    if not self._schedule_elective_course(schedule, data, course, selected_year, sections):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1685, in _schedule_elective_course
+    return self._schedule_elective_course_dynamic(schedule, data, course, year, sections)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1805, in _schedule_elective_course_dynamic
+    logger.info(f"  \u2713 ELECTIVE {course.course_number}: Successfully scheduled all {scheduled_hours} hours")
+Message: '  \u2713 ELECTIVE 23IT5121: Successfully scheduled all 4 hours'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 4: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1310, in build_schedule
+    if not self._schedule_elective_course(schedule, data, course, selected_year, sections):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1683, in _schedule_elective_course
+    logger.warning(f"    \u274c Not enough pre-allocated times! Need {hours_per_week}, got {len(times_to_use)}")
+Message: '    \u274c Not enough pre-allocated times! Need 4, got 0'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 2: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1310, in build_schedule
+    if not self._schedule_elective_course(schedule, data, course, selected_year, sections):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1685, in _schedule_elective_course
+    return self._schedule_elective_course_dynamic(schedule, data, course, year, sections)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1805, in _schedule_elective_course_dynamic
+    logger.info(f"  \u2713 ELECTIVE {course.course_number}: Successfully scheduled all {scheduled_hours} hours")
+Message: '  \u2713 ELECTIVE 23IT5131: Successfully scheduled all 4 hours'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u26a0' in position 6: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1318, in build_schedule
+    if not self._schedule_theory_course(schedule, data, course, selected_year, section):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1865, in _schedule_theory_course
+    logger.warning(f"      \u26a0 No continuous blocks available for {course.course_number} Sec{section}")
+Message: '      \u26a0 No continuous blocks available for 23TP19104 Sec2'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 6: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1318, in build_schedule
+    if not self._schedule_theory_course(schedule, data, course, selected_year, section):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1866, in _schedule_theory_course
+    logger.warning(f"      \u2192 Falling back to separate period scheduling (will be penalized in fitness)")
+Message: '      \u2192 Falling back to separate period scheduling (will be penalized in fitness)'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u26a0' in position 6: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1318, in build_schedule
+    if not self._schedule_theory_course(schedule, data, course, selected_year, section):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1865, in _schedule_theory_course
+    logger.warning(f"      \u26a0 No continuous blocks available for {course.course_number} Sec{section}")
+Message: '      \u26a0 No continuous blocks available for 23TP9104 Sec1'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 6: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1318, in build_schedule
+    if not self._schedule_theory_course(schedule, data, course, selected_year, section):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1866, in _schedule_theory_course
+    logger.warning(f"      \u2192 Falling back to separate period scheduling (will be penalized in fitness)")
+Message: '      \u2192 Falling back to separate period scheduling (will be penalized in fitness)'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u26a0' in position 6: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1318, in build_schedule
+    if not self._schedule_theory_course(schedule, data, course, selected_year, section):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1865, in _schedule_theory_course
+    logger.warning(f"      \u26a0 No continuous blocks available for {course.course_number} Sec{section}")
+Message: '      \u26a0 No continuous blocks available for 23TP9104 Sec2'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 6: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1318, in build_schedule
+    if not self._schedule_theory_course(schedule, data, course, selected_year, section):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1866, in _schedule_theory_course
+    logger.warning(f"      \u2192 Falling back to separate period scheduling (will be penalized in fitness)")
+Message: '      \u2192 Falling back to separate period scheduling (will be penalized in fitness)'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u26a0' in position 6: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1318, in build_schedule
+    if not self._schedule_theory_course(schedule, data, course, selected_year, section):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1865, in _schedule_theory_course
+    logger.warning(f"      \u26a0 No continuous blocks available for {course.course_number} Sec{section}")
+Message: '      \u26a0 No continuous blocks available for 23TP9104 Sec3'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 6: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1318, in build_schedule
+    if not self._schedule_theory_course(schedule, data, course, selected_year, section):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1866, in _schedule_theory_course
+    logger.warning(f"      \u2192 Falling back to separate period scheduling (will be penalized in fitness)")
+Message: '      \u2192 Falling back to separate period scheduling (will be penalized in fitness)'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f527' in position 0: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1349, in build_schedule
+    logger.info("\U0001f527 FINAL GAP CHECK: Verifying all courses are fully scheduled")
+Message: '\U0001f527 FINAL GAP CHECK: Verifying all courses are fully scheduled'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1397, in build_schedule
+    logger.info("\u2713 All courses fully scheduled - no gaps remaining")
+Message: '\u2713 All courses fully scheduled - no gaps remaining'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4c5' in position 0: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1400, in build_schedule
+    logger.info("\U0001f4c5 Starting special periods scheduling...")
+Message: '\U0001f4c5 Starting special periods scheduling...'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2b50' in position 0: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1406, in build_schedule
+    tp_continuous = schedule.validate_continuous_theory_strict()
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 736, in validate_continuous_theory_strict
+    logger.warning(f"\u2b50 STRICT REJECT: {course.course_number} Sec {section} split across {len(days)} days")
+Message: '\u2b50 STRICT REJECT: 23TP19104 Sec 2 split across 2 days'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1410, in build_schedule
+    logger.warning("\u26a0\ufe0f TP continuity constraint violated (some TP courses split across days)")
+Message: '\u26a0\ufe0f TP continuity constraint violated (some TP courses split across days)'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+Call stack:
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 22, in <module>
+    schedule = scheduler.build_schedule(year_data, year)
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\SchedulerApp\views.py", line 1414, in build_schedule
+    logger.info(f"\u2705 Successfully scheduled {len(schedule._classes)} classes")
+Message: '\u2705 Successfully scheduled 165 classes'
+Arguments: ()
+
+--- 3RD YEAR TP COURSES CONTINUITY CHECK ---
+Traceback (most recent call last):
+  File "c:\Users\M srujitha\OneDrive\\ubb38\uc11c\Desktop\timetablescheduler\verify_tp_blocks.py", line 29, in <module>
+    if cls.getCourse().course_type == 'TP':
+       ^^^^^^^^^^^^^
+AttributeError: 'Class' object has no attribute 'getCourse'. Did you mean: 'get_course'?

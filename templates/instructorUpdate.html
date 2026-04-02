@@ -45,6 +45,31 @@
     border-color: #667eea;
 }
 
+.form-group input[type="email"],
+.form-group input[type="password"],
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.form-group input[type="email"]:focus,
+.form-group input[type="password"]:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-group small.text-muted {
+    display: block;
+    margin-top: 5px;
+    color: #6c757d;
+    font-size: 14px;
+}
+
 .btn-group {
     display: flex;
     gap: 15px;
@@ -96,6 +121,38 @@
         <div class="form-group">
             <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
             {{ form.name }}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% if form.email.help_text %}
+                <small class="text-muted">{{ form.email.help_text }}</small>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.designation.id_for_label }}">{{ form.designation.label }}</label>
+            {{ form.designation }}
+            {% if form.designation.help_text %}
+                <small class="text-muted">{{ form.designation.help_text }}</small>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.department.id_for_label }}">{{ form.department.label }}</label>
+            {{ form.department }}
+            {% if form.department.help_text %}
+                <small class="text-muted">{{ form.department.help_text }}</small>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.password.id_for_label }}">Password</label>
+            {{ form.password }}
+            {% if form.password.help_text %}
+                <small class="text-muted">{{ form.password.help_text }}</small>
+            {% endif %}
         </div>
         
         <div class="btn-group">
